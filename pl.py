@@ -6,7 +6,7 @@ import psutil
 import sys
 from texttable import Texttable
 import cmdw
-MAX_LENGTH = cmdw.getWidth()
+MAX_LENGTH = cmdw.getWidth() - 4
 if not sys.platform == 'win32':
     MAX_LENGTH = MAX_LENGTH - 4
 from make_colors import make_colors
@@ -18,7 +18,7 @@ import math
 import traceback
 import random
 import cmdw
-MAXLENGTH = cmdw.getWidth()
+from debug import * 
 
 def convert_size(size_bytes):
     if (size_bytes == 0):
@@ -29,7 +29,8 @@ def convert_size(size_bytes):
     s = round(size_bytes / p, 2)
     return '%s %s' % (s, size_name[i])
 
-def makeTable(data_search, data_filter = None, sorted = False, tail = None):
+def makeTable(data_search, data_filter = None, sorted = False, tail = None, show_cpu = False):
+    debug(data_search = data_search)
     #random_choices = ['white','grey', 'blue', 'cyan', 'green', 'red', 'magenta', 'yellow',]
     #print "tail =", tail
     if tail and not sorted:
@@ -55,11 +56,13 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                 exe =  data_search.get(i).get('exe')
                 cmd = " ".join(data_search.get(i).get('cmd'))
                 mem = convert_size(data_search.get(i).get('mem'))
+                cpu = data_search.get(i).get('cpu')
                 print "NAME :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
                 print "PID  :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
                 print "EXE  :", make_colors(str(exe), 'lightred', color_type= 'colorama')
                 print "MEM  :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-                print "CMD    :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+                print "CMD  :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+                print "CPU  :", make_colors(str(cmd), 'lightcyan', color_type= 'colorama')
                 print "-" * MAX_LENGTH
                 number += 1
             if data_filter:
@@ -68,12 +71,14 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                     pid = data_filter.get(i).get('pid')
                     exe =  data_filter.get(i).get('exe')
                     cmd = " ".join(data_filter.get(i).get('cmd'))
+                    cpu = data_filter.get(i).get('cpu')
                     mem = convert_size(data_filter.get(i).get('mem'))
                     print "NAME :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
                     print "PID  :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
                     print "EXE  :", make_colors(str(exe), 'lightred', color_type= 'colorama')
                     print "MEM  :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-                    print "CMD    :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+                    print "CMD  :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+                    print "CPU  :", make_colors(str(cmd), 'lightcyan', color_type= 'colorama')
                     print "-" * MAX_LENGTH
                     number += 1
         else:
@@ -81,13 +86,15 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                 name = i[1].get('name')
                 pid = i[1].get('pid')
                 exe = i[1].get('exe')
+                cpu = i[1].get('cpu')
                 cmd = " ".join(i[1].get('cmd'))
                 mem = convert_size(i[1].get('mem'))
                 print "NAME :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
                 print "PID  :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
                 print "EXE  :", make_colors(str(exe), 'lightred', color_type= 'colorama')
                 print "MEM  :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-                print "CMD    :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+                print "CMD  :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+                print "CPU  :", make_colors(str(cmd), 'lightcyan', color_type= 'colorama')
                 print "-" * MAX_LENGTH
                 number += 1
             if data_filter:
@@ -95,38 +102,66 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                     name = i[1].get('name')
                     pid = i[1].get('pid')
                     exe =  i[1].get('exe')
+                    cpu =  i[1].get('cpu')
                     cmd = " ".join(i[1].get('cmd'))
                     mem = convert_size(i[1].get('mem'))
                     print "NAME :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
                     print "PID  :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
                     print "EXE  :", make_colors(str(exe), 'lightred', color_type= 'colorama')
                     print "MEM  :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-                    print "CMD    :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+                    print "CMD  :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+                    print "CPU  :", make_colors(str(cmd), 'lightcyan', color_type= 'colorama')
                     print "-" * MAX_LENGTH                    
                     number += 1
     else:
         table = Texttable()
-        table.set_cols_align(["l", "l", "l", "l", "c", "c"])
-        table.set_cols_valign(["t", "m", "m", "m", "m", "b"])
-        if sys.platform == 'win32':
-            table.set_cols_width([
-                    int(MAX_LENGTH * 0.01),
-                            int(MAX_LENGTH * 0.1),
-                            int(MAX_LENGTH * 0.03),
-                            int(MAX_LENGTH * 0.28),
-                            int(MAX_LENGTH * 0.05),
-                            int(MAX_LENGTH * 0.45),
-                ])
+        if show_cpu:
+            table.header(['No','Name','PID','EXE', 'Mem', 'CPU %', 'CMD'])
+            table.set_cols_align(["l", "l", "l", "l", "c", "c", "c"])
+            table.set_cols_valign(["t", "m", "m", "m", "m", "m", "b"])
+            if sys.platform == 'win32':
+                table.set_cols_width([
+                        int(MAX_LENGTH * 0.02),
+                        int(MAX_LENGTH * 0.1),
+                        int(MAX_LENGTH * 0.03),
+                        int(MAX_LENGTH * 0.24),
+                        int(MAX_LENGTH * 0.05),
+                        int(MAX_LENGTH * 0.03),
+                        int(MAX_LENGTH * 0.44),
+                    ])
+            else:
+                table.set_cols_width([
+                        int(MAX_LENGTH * 0.03),
+                        int(MAX_LENGTH * 0.1),
+                        int(MAX_LENGTH * 0.04),
+                        int(MAX_LENGTH * 0.25),
+                        int(MAX_LENGTH * 0.05),
+                        int(MAX_LENGTH * 0.03),
+                        int(MAX_LENGTH * 0.42),
+                    ])
         else:
-            table.set_cols_width([
-                    int(MAX_LENGTH * 0.03),
-                            int(MAX_LENGTH * 0.1),
-                            int(MAX_LENGTH * 0.04),
-                            int(MAX_LENGTH * 0.28),
-                            int(MAX_LENGTH * 0.05),
-                            int(MAX_LENGTH * 0.42),
-                ])
-        table.header(['No','Name','PID','EXE', 'Mem', 'CMD'])
+            table.header(['No','Name','PID','EXE', 'Mem', 'CMD'])
+            table.set_cols_align(["l", "l", "l", "l", "c", "c"])
+            table.set_cols_valign(["t", "m", "m", "m", "m", "b"])
+            if sys.platform == 'win32':
+                table.set_cols_width([
+                        int(MAX_LENGTH * 0.02),
+                        int(MAX_LENGTH * 0.1),
+                        int(MAX_LENGTH * 0.03),
+                        int(MAX_LENGTH * 0.28),
+                        int(MAX_LENGTH * 0.05),
+                        int(MAX_LENGTH * 0.44),
+                    ])
+            else:
+                table.set_cols_width([
+                        int(MAX_LENGTH * 0.03),
+                        int(MAX_LENGTH * 0.1),
+                        int(MAX_LENGTH * 0.04),
+                        int(MAX_LENGTH * 0.28),
+                        int(MAX_LENGTH * 0.05),
+                        int(MAX_LENGTH * 0.42),
+                    ])
+            
         sys.dont_write_bytecode = True
         number = 1
         #print "sorted =", sorted
@@ -135,6 +170,7 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                 name = data_search.get(i).get('name')
                 pid = data_search.get(i).get('pid')
                 exe =  data_search.get(i).get('exe')
+                cpu =  data_search.get(i).get('cpu')
                 cmd = " ".join(data_search.get(i).get('cmd'))
                 mem = convert_size(data_search.get(i).get('mem'))
                 time = data_search.get(i).get('time')
@@ -145,7 +181,8 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                         name,
                         str(pid),
                         exe,
-                        mem, 
+                        mem,
+                        cpu, 
                         cmd
                     ])
                     #table.add_row([
@@ -156,20 +193,32 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                         #make_colors(cmd, 'lightcyan', color_type= 'co2lorama')
                         #])
                 except:
-                    table.add_row([
-                        str(number),
-                        unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                        unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                        unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                        unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                        unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                    ])
+                    if show_cpu:
+                        table.add_row([
+                            str(number),
+                            unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                        ])
+                    else:
+                        table.add_row([
+                            str(number),
+                            unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                        ])
                 number += 1
             if data_filter:
                 for i in data_filter:
                     name = data_filter.get(i).get('name')
                     pid = data_filter.get(i).get('pid')
                     exe =  data_filter.get(i).get('exe')
+                    cpu =  data_filter.get(i).get('cpu')
                     cmd = " ".join(data_filter.get(i).get('cmd'))
                     mem = convert_size(data_filter.get(i).get('mem'))
                     time = data_filter.get(i).get('time')
@@ -180,18 +229,30 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                                 name,
                                 str(pid),
                                 exe,
-                                mem, 
+                                mem,
+                                cpu, 
                                 cmd
                             ])
                     except:
-                        table.add_row([
-                                str(number),
-                                unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                                unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                                unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                                unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                                unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                        ])            
+                        if show_cpu:
+                            table.add_row([
+                                    str(number),
+                                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                            ])
+                        else:
+                            table.add_row([
+                                    str(number),
+                                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                            ])            
             #if sys.stdout.encoding != 'cp850':
                 #sys.stdout = codecs.getwriter('utf-8')(sys.stdout, 'strict')
             #if sys.stderr.encoding != 'cp850':
@@ -202,6 +263,7 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                 name = i[1].get('name')
                 pid = i[1].get('pid')
                 exe = i[1].get('exe')
+                cpu = i[1].get('cpu')
                 cmd = " ".join(i[1].get('cmd'))
                 mem = convert_size(i[1].get('mem'))
                 
@@ -211,7 +273,8 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                         name,
                         str(pid),
                         exe,
-                        mem, 
+                        mem,
+                        cpu, 
                         cmd
                     ])
                     #table.add_row([
@@ -222,20 +285,32 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                         #make_colors(cmd, 'lightcyan', color_type= 'co2lorama')
                         #])
                 except:
-                    table.add_row([
-                        str(number),
-                        unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                        unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                        unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                        unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                        unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                    ])
+                    if show_cpu:
+                        table.add_row([
+                            str(number),
+                            unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                        ])
+                    else:
+                        table.add_row([
+                            str(number),
+                            unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                            unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                        ])
                 number += 1
             if data_filter:
                 for i in data_filter:
                     name = i[1].get('name')
                     pid = i[1].get('pid')
                     exe =  i[1].get('exe')
+                    cpu =  i[1].get('cpu')
                     cmd = " ".join(i[1].get('cmd'))
                     mem = convert_size(i[1].get('mem'))
                 
@@ -245,18 +320,30 @@ def makeTable(data_search, data_filter = None, sorted = False, tail = None):
                                 name,
                                 str(pid),
                                 exe,
-                                mem, 
+                                mem,
+                                cpu, 
                                 cmd
                             ])
                     except:
-                        table.add_row([
-                                str(number),
-                                unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                                unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                                unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                                unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                                unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                        ])            
+                        if show_cpu:
+                            table.add_row([
+                                    str(number),
+                                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                            ])
+                        else:
+                            table.add_row([
+                                    str(number),
+                                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                            ])            
             #if sys.stdout.encoding != 'cp850':
                 #sys.stdout = codecs.getwriter('utf-8')(sys.stdout, 'strict')
             #if sys.stderr.encoding != 'cp850':
@@ -370,18 +457,23 @@ def get_child(pid, separated = True, process_instance = None, memory_detail = Fa
                 print "+" * 100                        
     
 
-def ps(pfilter = None, sort = None, reverse = False, show_all = False):
+def ps(pfilter = None, sort = None, reverse = False, show_all = False, show_cpu = False):
     list_process = {}
     list_filter = {}
     n = 1
     for process in psutil.process_iter():
+        #debug(process = process)
         name, exe, cmd, mem = "", "", [], ()
         try:
             name = process.name()
             cmd = process.cmdline()
             exe = process.exe()
             pid = process.pid
-            cpu = process.cpu_percent()
+            if show_cpu:
+                cpu = process.cpu_percent(interval = 0.116)
+            else:
+                cpu = 0.0
+            #debug(cpu = cpu)
             mem = process.memory_full_info().vms
             time = process._create_time
             if pfilter and isinstance(pfilter, list):
@@ -606,7 +698,7 @@ def search(query, kill = False, fast = False, memory_detail = False, child_detai
                 get_memory_full_info(p[1].get('pid'), False)
             if child_detail:
                 get_child(p[1].get('pid'), False, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
-            print "-" * MAXLENGTH        
+            print "-" * MAX_LENGTH        
         #print "list_process =", list_process[-len(query):]
         #print "list_filter  =", list_filter[-len(query):]
         #print "-" * 200
@@ -638,7 +730,7 @@ def search(query, kill = False, fast = False, memory_detail = False, child_detai
                             get_memory_full_info(list_process.get(n).get('pid'), False)
                         if child_detail:
                             get_child(list_process.get(n).get('pid'), True, process_instance= p, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
-                        print "-" * MAXLENGTH
+                        print "-" * MAX_LENGTH
             else:
                 for n in list_process:
                     if str(i).lower() == list_process.get(n).get('name').lower():
@@ -666,7 +758,7 @@ def search(query, kill = False, fast = False, memory_detail = False, child_detai
                                 get_memory_full_info(list_process.get(n).get('pid'), False)
                             if child_detail:
                                 get_child(list_process.get(n).get('pid'), True, memory_detail= memory_detail, tab = 1, kill = kill_recursive) 
-                            print "-" * MAXLENGTH
+                            print "-" * MAX_LENGTH
                         except psutil.NoSuchProcess:
                             pass
                         except:
@@ -697,7 +789,7 @@ def search(query, kill = False, fast = False, memory_detail = False, child_detai
                                     get_memory_full_info(list_process.get(n).get('pid'), False)
                                 if child_detail:
                                     get_child(list_process.get(n).get('pid'), True, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
-                                print "-" * MAXLENGTH
+                                print "-" * MAX_LENGTH
                             except psutil.NoSuchProcess:
                                 pass
                             except:
@@ -733,7 +825,7 @@ def search(query, kill = False, fast = False, memory_detail = False, child_detai
                                 get_memory_full_info(list_process.get(n).get('pid'), False)
                             if child_detail:
                                 get_child(list_process.get(n).get('pid'), True, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
-                            print "-" * MAXLENGTH
+                            print "-" * MAX_LENGTH
                         else:
                             if str(i) in list_process.get(n).get('exe').lower():
                                 ver += 1
@@ -759,7 +851,7 @@ def search(query, kill = False, fast = False, memory_detail = False, child_detai
                                     get_memory_full_info(list_process.get(n).get('pid'), False)
                                 if child_detail:
                                     get_child(list_process.get(n).get('pid'), True, memory_detail= memory_detail, tab = 1, kill = kill_recursive)  
-                                print "-" * MAXLENGTH
+                                print "-" * MAX_LENGTH
                 if ver == 0:
                     print make_colors("NOT FOUND !", 'white', 'red', ['bold', 'blink'])
 
@@ -1073,6 +1165,7 @@ Options:
     parse.add_argument('-c', '--childs', help = 'Show all Childs process of process', action = 'store_true')
     parse.add_argument('-M', '--memory-details', help = 'Show all memory details of process', action = 'store_true')
     parse.add_argument('-d', '--details', help = 'Show all details of process', action = 'store_true')
+    parse.add_argument('-C', '--show-cpu-percent', help = 'Show CPU Load Percent', action = 'store_true')
     parse.add_argument('-MM', '--memory-detail', help = 'Show all memory detail of one process by given pid or correct name', action = 'store', type = int)
     args = parse.parse_args()
     #print "args.filter =", args.filter
@@ -1116,19 +1209,37 @@ Options:
         if args.always_kill:
             kill(args.always_kill, True)
         if args.filter:
-            p, p1 = ps(args.filter, sorting, args.reverse, args.all)
+            if sorting == 'cpu' or args.show_cpu_percent:
+                p, p1 = ps(args.filter, sorting, args.reverse, args.all, True)
+            else:
+                p, p1 = ps(args.filter, sorting, args.reverse, args.all)
             try:
-                makeTable(p, p1, SORTED, args.tail)
+                if sorting == 'cpu' or args.show_cpu_percent:
+                    makeTable(p, p1, SORTED, args.tail, True)
+                else:
+                    makeTable(p, p1, SORTED, args.tail)
             except:
-                traceback.format_exc(print_msg= False)
+                if os.getenv('DEBUG') or os.getenv('debug'):
+                    traceback.format_exc(print_msg= True)
+                else:
+                    traceback.format_exc(print_msg= False)
                 pass
         else:
             if not args.kill and not args.always_kill and not args.search and not args.search_kill:
-                p, p1 = ps(args.filter, sorting, args.reverse, args.all)
+                if sorting == 'cpu' or args.show_cpu_percent:
+                    p, p1 = ps(args.filter, sorting, args.reverse, args.all, True)
+                else:
+                    p, p1 = ps(args.filter, sorting, args.reverse, args.all)
                 try:
-                    makeTable(p, p1, SORTED, args.tail)
+                    if sorting == 'cpu' or args.show_cpu_percent:
+                        makeTable(p, p1, SORTED, args.tail, True)
+                    else:
+                        makeTable(p, p1, SORTED, args.tail)
                 except:
-                    traceback.format_exc(print_msg= False)
+                    if os.getenv('DEBUG') or os.getenv('debug'):
+                        traceback.format_exc(print_msg= True)
+                    else:
+                        traceback.format_exc(print_msg= False)
                     parse.print_help()
         
 if __name__ == '__main__':
