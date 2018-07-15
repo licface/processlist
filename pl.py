@@ -1,6 +1,8 @@
 #!/usr/bin/python2
 #-*- encoding: UTF-8 -*-
 #encoding: UTF-8
+#author: Hadi Cahyadi <licface@yahoo.com>
+#licence: MiT
 
 import psutil
 import sys
@@ -11,7 +13,7 @@ if not sys.platform == 'win32':
     MAX_LENGTH = MAX_LENGTH - 4
 from make_colors import make_colors
 import colorama
-colorama.init()
+colorama.init(autoreset=True)
 import time
 import os
 import math
@@ -19,6 +21,7 @@ import traceback
 import random
 import cmdw
 from debug import * 
+PID = os.getpid()
 
 def convert_size(size_bytes):
     if (size_bytes == 0):
@@ -29,328 +32,502 @@ def convert_size(size_bytes):
     s = round(size_bytes / p, 2)
     return '%s %s' % (s, size_name[i])
 
-def makeTable(data_search, data_filter = None, sorted = False, tail = None, show_cpu = False):
-    debug(data_search = data_search)
-    #random_choices = ['white','grey', 'blue', 'cyan', 'green', 'red', 'magenta', 'yellow',]
-    #print "tail =", tail
-    if tail and not sorted:
-        data_search1 = {}
-        data_filter1 = {}
-        data_search_keys = data_search.keys()[-int(tail):]
-        data_filter_keys = data_filter.keys()[-int(tail):]
-        for i in data_search_keys:
-            data_search1.update({i:data_search.get(i)})
-        for i in data_filter_keys:
-            data_filter1.update({i:data_filter.get(i)})
-        data_search = data_search1
-        data_filter = data_filter1
-    elif tail and sorted:
-        data_search = data_search[-int(tail):]
-        data_filter = data_filter[-int(tail):]
-    if MAX_LENGTH <= (220 / 2):
-        number = 1
-        if not sorted:
-            for i in data_search:
-                name = data_search.get(i).get('name')
-                pid = data_search.get(i).get('pid')
-                exe =  data_search.get(i).get('exe')
-                cmd = " ".join(data_search.get(i).get('cmd'))
-                mem = convert_size(data_search.get(i).get('mem'))
-                cpu = data_search.get(i).get('cpu')
-                print "NAME :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
-                print "PID  :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
-                print "EXE  :", make_colors(str(exe), 'lightred', color_type= 'colorama')
-                print "MEM  :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-                print "CMD  :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
-                print "CPU  :", make_colors(str(cmd), 'lightcyan', color_type= 'colorama')
-                print "-" * MAX_LENGTH
-                number += 1
-            if data_filter:
-                for i in data_filter:
-                    name = data_filter.get(i).get('name')
-                    pid = data_filter.get(i).get('pid')
-                    exe =  data_filter.get(i).get('exe')
-                    cmd = " ".join(data_filter.get(i).get('cmd'))
-                    cpu = data_filter.get(i).get('cpu')
-                    mem = convert_size(data_filter.get(i).get('mem'))
-                    print "NAME :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
-                    print "PID  :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
-                    print "EXE  :", make_colors(str(exe), 'lightred', color_type= 'colorama')
-                    print "MEM  :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-                    print "CMD  :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
-                    print "CPU  :", make_colors(str(cmd), 'lightcyan', color_type= 'colorama')
-                    print "-" * MAX_LENGTH
-                    number += 1
+def printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number="*"):
+    if fast_list_mode:
+        print str(number) + ". " + make_colors(str(name), 'lightcyan', color_type= 'colorama') + " " \
+        + "[" + make_colors(str(pid), 'lightyellow', color_type= 'colorama') + "]" + " " \
+        + make_colors(str(mem), 'lightgreen', color_type= 'colorama') + " " \
+        + "(" + make_colors(str(status), 'lightmagenta', color_type= 'colorama') + ")"
+    else:
+        print "NAME   :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
+        print "PID    :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
+        print "EXE    :", make_colors(str(exe), 'lightred', color_type= 'colorama')
+        print "MEM    :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
+        print "CMD    :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
+        print "CPU    :", make_colors(str(cpu), 'lightcyan', color_type= 'colorama')
+        print "STATUS :", make_colors(str(status), 'lightmagenta', color_type= 'colorama')
+
+def printListNetworks(local_address, local_port, remote_address, remote_port, status, type, family, fd, fast_list_mode, number=None, name=None, pid=None, dont_print_number=True, mode_tree=True):
+    if number:
+        number = str(number) + ". "
+    else:
+        number = ''
+    if dont_print_number:
+        number = '-'
+    if not name:
+        name =''
+    if not pid:
+        pid = ''
+    else:
+        pid = "(" + str(pid) + ")"
+    if mode_tree:
+        tree_add_1 = "   |"
+        tree_add_2 = "   +-"
+    else:
+        tree_add_1 = ""
+        tree_add_2 = ""
+    if fast_list_mode:
+        if local_address:
+            print tree_add_1
+            sys.stdout.write(tree_add_2 + number + make_colors(str(name), 'lightcyan', color_type= 'colorama') \
+                        + make_colors(pid, 'lightyellow', color_type= 'colorama') + " " \
+                        + "[" + "local=" + make_colors(str(local_address) + ":" + str(local_port), 'lightgreen', color_type= 'colorama') + "]" + " " \
+                        + "[" + "remote=" + make_colors(str(remote_address) + ":" + str(remote_port), 'lightblue', color_type= 'colorama') + "]" + " " \
+                        + "(" + make_colors("fd:" + str(fd), 'lightgreen', color_type= 'colorama') \
+                        + "," + make_colors("type:" + str(type), 'lightmagenta', color_type= 'colorama') \
+                        + "," + make_colors("family:" + str(family), 'lightred', color_type= 'colorama') + ")" + " " \
+                        + "| " "STATUS: " + make_colors(str(status), 'lightyellow', color_type= 'colorama') + '\n\n')
+
+    else:
+        if name and pid:
+            print "NAME           :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
+            print "PID            :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
+        print "LOCAL ADDRESS  :", make_colors(str(local_address), 'lightgreen', color_type= 'colorama')
+        print "LOCAL PORT     :", make_colors(str(local_port), 'lightgreen', color_type= 'colorama')
+        print "REMOTE ADDRESS :", make_colors(str(remote_address), 'lightblue', color_type= 'colorama')
+        print "REMOTE PORT    :", make_colors(str(remote_port), 'lightblue', color_type= 'colorama')
+        print "STATUS         :", make_colors(str(status), 'lightyellow', color_type= 'colorama')
+        print "FD             :", make_colors(str(fd), 'lightgreen', color_type= 'colorama')
+        print "PROTOCOL       :", make_colors(str(type), 'lightmagenta', color_type= 'colorama')
+        print "SOCK           :", make_colors(str(family), 'lightred', color_type= 'colorama')
+
+def getData(i, sort=False, data_search=None):
+    list_networks = []
+    mem = data_search.get(i).get('mem')
+    if not sort:
+        name = data_search.get(i).get('name')
+        pid = data_search.get(i).get('pid')
+        exe =  data_search.get(i).get('exe')
+        cmd = " ".join(data_search.get(i).get('cmd'))
+        cpu = data_search.get(i).get('cpu')
+        time  = data_search.get(i).get('time')
+        if mem:
+            mem = convert_size(data_search.get(i).get('mem'))
+        status = data_search.get(i).get('status')
+        connections = data_search.get(i).get('connections')
+    else:
+        mem = i[1].get('mem')
+        name = i[1].get('name')
+        pid = i[1].get('pid')
+        exe =  i[1].get('exe')
+        cpu =  i[1].get('cpu')
+        time =  i[1].get('time')
+        cmd = " ".join(i[1].get('cmd'))
+        status = i[1].get('status')
+        if mem:
+            mem = convert_size(i[1].get('mem'))
+        connections = i[1].get('connections')
+
+    return name, pid, exe, cmd, cpu, time, status, mem, connections
+
+def getDataNetworks(connections):
+    local_address = ''
+    local_port = ''
+    remote_address = ''
+    remote_port = ''
+    fd = ''
+    protocol = ''
+    type = ''
+    status = ''
+    if connections:
+        fd = connections.get('fd')
+        protocol = connections.get('protocol')
+        type = connections.get('type')
+        laddr = connections.get('laddr')
+        raddr = connections.get('raddr')
+        if laddr:
+            local_address, local_port = laddr
+        if raddr:
+            remote_address, remote_port = raddr
+        status = connections.get('status')
+        if status == "NONE":
+            status = ''
+
+    return fd, type, protocol, local_address, local_port, remote_address, remote_port, status
+
+
+def makeTableAdd(table, number, name, pid, exe, mem, cpu, cmd, show_cpu, status=None):
+    try:
+        if status:
+            if show_cpu:
+                table.add_row([str(number), name, str(pid), exe, mem, cpu, cmd, status])
+            else:
+                table.add_row([str(number), name, str(pid), exe, mem, cmd, status])
         else:
-            for i in data_search:
-                name = i[1].get('name')
-                pid = i[1].get('pid')
-                exe = i[1].get('exe')
-                cpu = i[1].get('cpu')
-                cmd = " ".join(i[1].get('cmd'))
-                mem = convert_size(i[1].get('mem'))
-                print "NAME :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
-                print "PID  :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
-                print "EXE  :", make_colors(str(exe), 'lightred', color_type= 'colorama')
-                print "MEM  :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-                print "CMD  :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
-                print "CPU  :", make_colors(str(cmd), 'lightcyan', color_type= 'colorama')
-                print "-" * MAX_LENGTH
-                number += 1
-            if data_filter:
-                for i in data_filter:
-                    name = i[1].get('name')
-                    pid = i[1].get('pid')
-                    exe =  i[1].get('exe')
-                    cpu =  i[1].get('cpu')
-                    cmd = " ".join(i[1].get('cmd'))
-                    mem = convert_size(i[1].get('mem'))
-                    print "NAME :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
-                    print "PID  :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
-                    print "EXE  :", make_colors(str(exe), 'lightred', color_type= 'colorama')
-                    print "MEM  :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-                    print "CMD  :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
-                    print "CPU  :", make_colors(str(cmd), 'lightcyan', color_type= 'colorama')
-                    print "-" * MAX_LENGTH                    
+            if show_cpu:
+                table.add_row([str(number), name, str(pid), exe, mem, cpu, cmd])
+            else:
+                table.add_row([str(number), name, str(pid), exe, mem, cmd])
+    except:
+        print traceback.format_exc()
+        print "="*MAX_LENGTH
+        if status:
+            if show_cpu:
+                table.add_row([
+                    str(number),
+                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                    unicode(status).encode(sys.stdout.encoding, errors='replace'), 
+                ])
+            else:
+                table.add_row([
+                    str(number),
+                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                    unicode(status).encode(sys.stdout.encoding, errors='replace'), 
+                ])
+        else:
+            if show_cpu:
+                table.add_row([
+                    str(number),
+                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                ])
+            else:
+                table.add_row([
+                    str(number),
+                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
+                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
+                ])
+    return table
+
+def makeTableAddNetworks(table, number, name, pid, exe, local_address, local_port, remote_address, remote_port, fd, type, protocol, status, print_networks_only=False):
+    try:
+        if print_networks_only:
+            table.add_row([
+                local_address,
+                local_port, 
+                remote_address,
+                remote_port,
+                protocol,
+                fd,
+                type,
+                status
+            ])
+        else:
+            table.add_row([
+                str(number),
+                name,
+                str(pid),
+                local_address,
+                local_port, 
+                remote_address,
+                remote_port,
+                type,
+                fd,
+                protocol,
+                status,
+                exe
+            ])
+    except:
+        if print_networks_only:
+            table.add_row([
+                unicode(local_address).encode(sys.stdout.encoding, errors='replace'),
+                unicode(local_port).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(remote_address).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(remote_port).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(type).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(fd).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(protocol).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(type).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(status).encode(sys.stdout.encoding, errors='replace'), 
+            ])
+        else:
+            table.add_row([
+                str(number),
+                unicode(name).encode(sys.stdout.encoding, errors='replace'),
+                unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
+                unicode(local_address).encode(sys.stdout.encoding, errors='replace'),
+                unicode(local_port).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(remote_address).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(remote_port).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(type).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(fd).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(protocol).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(status).encode(sys.stdout.encoding, errors='replace'), 
+                unicode(exe).encode(sys.stdout.encoding, errors='replace'),
+            ])
+    number += 1
+    return table, number
+
+def printNetworks(networks, fast_list_mode, number=None, name=None, pid=None):
+    fd, type, protocol, local_address, local_port, remote_address, remote_port, status = getDataNetworks(networks)
+    if name and pid:
+        printListNetworks(local_address, local_port, remote_address, remote_port, status, type, protocol, fd, fast_list_mode, number, name, pid)
+    else:
+        printListNetworks(local_address, local_port, remote_address, remote_port, status, type, protocol, fd, fast_list_mode, number)
+
+def makeTable(data_search, filter = None, sort=None, tail = None, show_cpu = False, reverse=False, show_status=False, list_details=False, fast_list_mode=False, show_networks=False, show_networks_only=False):
+    number = 1
+    if fast_list_mode:
+        list_details = True
+    # debug(data_search0 = data_search)
+    if sort:
+        data_search = sort_dict(data_search, sort, reverse)
+        if tail:
+            data_search = data_search[-int(tail):]
+    else:
+        if tail:
+            data_search1 = {}
+            data_search_keys = data_search.keys()[-int(tail):]
+            for i in data_search_keys:
+                data_search1.update({i:data_search.get(i)})
+            data_search = data_search1
+    if MAX_LENGTH <= (220 / 2) or list_details:
+        if not sort: #MAX_LENGTH <= (220 / 2)
+            if filter: #MAX_LENGTH <= (220 / 2)
+                for i in data_search:
+                    if os.path.splitext(data_search.get(i).get('name'))[0].lower() in filter or data_search.get(i).get('pid') in filter:
+                        name, pid, exe, cmd, cpu, time, status, mem, connections = getData(i, False, data_search)
+                        if show_networks_only:
+                            printNetworks(connections, fast_list_mode, number, name, pid)
+                        else:
+                            printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
+                            if show_networks:
+                                printNetworks(connections, fast_list_mode)
+                        if not fast_list_mode:
+                            print "-" * MAX_LENGTH
+                        number += 1
+            else:
+                for i in data_search:
+                    name, pid, exe, cmd, cpu, time, status, mem, connections = getData(i, False, data_search)
+                    if show_networks_only:
+                        printNetworks(connections, fast_list_mode, number, name, pid)
+                    else:
+                        printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
+                        if show_networks:
+                            printNetworks(connections, fast_list_mode)
+                    if not fast_list_mode:
+                        print "-" * MAX_LENGTH
                     number += 1
+        else: #MAX_LENGTH <= (220 / 2)
+            if filter: #MAX_LENGTH <= (220 / 2)
+                for i in data_search:
+                    if os.path.splitext(i[1].get('name'))[0].lower() in filter or i[1].get('pid') in filter:
+                        name, pid, exe, cmd, cpu, time, status, mem, connections = getData(i, sort)
+                        if show_networks_only:
+                            printNetworks(connections, fast_list_mode, number)
+                        else:
+                            printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
+                            if show_networks:
+                                printNetworks(connections, fast_list_mode, number)
+                        if not fast_list_mode:
+                            print "-" * MAX_LENGTH
+                        number += 1
+            else:
+                for i in data_search:
+                    name, pid, exe, cmd, cpu, time, status, mem, connections = getData(i, sort)
+                    if show_networks_only:
+                        printNetworks(connections, fast_list_mode, number)
+                    else:
+                        printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
+                        if show_networks:
+                            printNetworks(connections, fast_list_mode, number)
+                    if not fast_list_mode:
+                        print "-" * MAX_LENGTH
+                    number += 1
+    #END ~ MAX_LENGTH <= (220 / 2)
     else:
         table = Texttable()
         if show_cpu:
-            table.header(['No','Name','PID','EXE', 'Mem', 'CPU %', 'CMD'])
-            table.set_cols_align(["l", "l", "l", "l", "c", "c", "c"])
-            table.set_cols_valign(["t", "m", "m", "m", "m", "m", "b"])
+            if show_status:
+                table.header(['No','Name','PID','EXE', 'Mem', 'CPU %', 'CMD', 'STATUS'])
+                table.set_cols_align(["l", "l", "l", "l", "c", "c", "c", "c"])
+                table.set_cols_valign(["t", "m", "m", "m", "m", "m", "t", "m"])
+            else:
+                table.header(['No','Name','PID','EXE', 'Mem', 'CPU %', 'CMD'])
+                table.set_cols_align(["l", "l", "l", "l", "c", "c", "c"])
+                table.set_cols_valign(["t", "m", "m", "m", "m", "m", "t"])
             if sys.platform == 'win32':
-                table.set_cols_width([
-                        int(MAX_LENGTH * 0.02),
-                        int(MAX_LENGTH * 0.1),
-                        int(MAX_LENGTH * 0.03),
-                        int(MAX_LENGTH * 0.24),
-                        int(MAX_LENGTH * 0.05),
-                        int(MAX_LENGTH * 0.03),
-                        int(MAX_LENGTH * 0.44),
+                if show_status:
+                    table.set_cols_width([
+                            int(MAX_LENGTH * 0.02), #No
+                            int(MAX_LENGTH * 0.1),  #Name
+                            int(MAX_LENGTH * 0.03), #PID
+                            int(MAX_LENGTH * 0.24), #EXE
+                            int(MAX_LENGTH * 0.05), #Mem
+                            int(MAX_LENGTH * 0.03), #CPU
+                            int(MAX_LENGTH * 0.38), #CMD
+                            int(MAX_LENGTH * 0.06), #STATUS
+                        ])
+                else:
+                    table.set_cols_width([
+                        int(MAX_LENGTH * 0.02), #No
+                        int(MAX_LENGTH * 0.1),  #Name
+                        int(MAX_LENGTH * 0.03), #PID
+                        int(MAX_LENGTH * 0.24), #EXE
+                        int(MAX_LENGTH * 0.05), #Mem
+                        int(MAX_LENGTH * 0.03), #CPU
+                        int(MAX_LENGTH * 0.44), #CMD
                     ])
             else:
-                table.set_cols_width([
-                        int(MAX_LENGTH * 0.03),
-                        int(MAX_LENGTH * 0.1),
-                        int(MAX_LENGTH * 0.04),
-                        int(MAX_LENGTH * 0.25),
-                        int(MAX_LENGTH * 0.05),
-                        int(MAX_LENGTH * 0.03),
-                        int(MAX_LENGTH * 0.42),
+                table.header(['No','Name','PID','EXE', 'Mem', 'CPU %', 'CMD', 'STATUS'])
+                if show_status:
+                    table.set_cols_width([
+                            int(MAX_LENGTH * 0.03), #No
+                            int(MAX_LENGTH * 0.1),  #Name
+                            int(MAX_LENGTH * 0.04), #PID
+                            int(MAX_LENGTH * 0.28), #EXE
+                            int(MAX_LENGTH * 0.05), #Mem
+                            int(MAX_LENGTH * 0.03), #CPU
+                            int(MAX_LENGTH * 0.33), #CMD
+                            int(MAX_LENGTH * 0.06), #STATUS
+                        ])
+                else:
+                    table.set_cols_width([
+                        int(MAX_LENGTH * 0.03), #No
+                        int(MAX_LENGTH * 0.1),  #Name
+                        int(MAX_LENGTH * 0.04), #PID
+                        int(MAX_LENGTH * 0.28), #EXE
+                        int(MAX_LENGTH * 0.05), #Mem
+                        int(MAX_LENGTH * 0.03), #CPU
+                        int(MAX_LENGTH * 0.39), #CMD
                     ])
+        elif show_networks_only or show_networks:
+            table.header(['No','Name','PID', 'L_Address', 'L_Port', 'R_Address', 'R_Port','Type','Fd','Sock', 'Status','EXE'])
+            table.set_cols_align(["l", "l", "l", "l", "c", "c", "c", "c", "c", "c", "c", "c"])
+            table.set_cols_valign(["t", "m", "m", "m", "m", "m", "m", "m", "m", "m", "m", "m"])
+            if sys.platform == 'win32':
+                #makeTableAddNetworks(number, name, pid, exe, local_address, local_port, remote_address, remote_port, fd, type, protocol, status
+                table.set_cols_width([
+                    int(MAX_LENGTH * 0.02), #No
+                    int(MAX_LENGTH * 0.1),  #Name
+                    int(MAX_LENGTH * 0.03), #PID
+                    int(MAX_LENGTH * 0.08), #L_Address
+                    int(MAX_LENGTH * 0.05), #L_Port
+                    int(MAX_LENGTH * 0.08), #R_Address
+                    int(MAX_LENGTH * 0.05), #R_Port
+                    int(MAX_LENGTH * 0.05), #Sock
+                    int(MAX_LENGTH * 0.02), #Fd
+                    int(MAX_LENGTH * 0.03), #Family
+                    int(MAX_LENGTH * 0.08), #Status
+                    int(MAX_LENGTH * 0.25), #EXE
+                ])
+            else:
+                table.set_cols_width([
+                    int(MAX_LENGTH * 0.03), #No
+                    int(MAX_LENGTH * 0.1),  #Name
+                    int(MAX_LENGTH * 0.04), #PID
+                    int(MAX_LENGTH * 0.08), #L_Address
+                    int(MAX_LENGTH * 0.05), #L_Port
+                    int(MAX_LENGTH * 0.08), #R_Address
+                    int(MAX_LENGTH * 0.05), #R_Port
+                    int(MAX_LENGTH * 0.05), #Sock
+                    int(MAX_LENGTH * 0.02), #Fd
+                    int(MAX_LENGTH * 0.03), #Family
+                    int(MAX_LENGTH * 0.08), #Status
+                    int(MAX_LENGTH * 0.22), #EXE
+                ])
         else:
-            table.header(['No','Name','PID','EXE', 'Mem', 'CMD'])
-            table.set_cols_align(["l", "l", "l", "l", "c", "c"])
-            table.set_cols_valign(["t", "m", "m", "m", "m", "b"])
+            if show_status:
+                table.header(['No','Name','PID','EXE', 'Mem', 'CMD', 'STATUS'])
+                table.set_cols_align(["l", "l", "l", "l", "c", "c", "c"])
+                table.set_cols_valign(["t", "m", "m", "m", "m", "t", "m"])
+            else:
+                table.header(['No','Name','PID','EXE', 'Mem', 'CMD'])
+                table.set_cols_align(["l", "l", "l", "l", "c", "c"])
+                table.set_cols_valign(["t", "m", "m", "m", "m", "t"])
             if sys.platform == 'win32':
-                table.set_cols_width([
-                        int(MAX_LENGTH * 0.02),
-                        int(MAX_LENGTH * 0.1),
-                        int(MAX_LENGTH * 0.03),
-                        int(MAX_LENGTH * 0.28),
-                        int(MAX_LENGTH * 0.05),
-                        int(MAX_LENGTH * 0.44),
+                if show_status:
+                    table.set_cols_width([
+                            int(MAX_LENGTH * 0.02), #No
+                            int(MAX_LENGTH * 0.1),  #Name
+                            int(MAX_LENGTH * 0.03), #PID
+                            int(MAX_LENGTH * 0.28), #EXE
+                            int(MAX_LENGTH * 0.05), #Mem
+                            int(MAX_LENGTH * 0.38), #CMD
+                            int(MAX_LENGTH * 0.06), #STATUS
+                        ])
+                else:
+                    table.set_cols_width([
+                        int(MAX_LENGTH * 0.02), #No
+                        int(MAX_LENGTH * 0.1),  #Name
+                        int(MAX_LENGTH * 0.03), #PID
+                        int(MAX_LENGTH * 0.28), #EXE
+                        int(MAX_LENGTH * 0.05), #Mem
+                        int(MAX_LENGTH * 0.44), #CMD
                     ])
             else:
-                table.set_cols_width([
-                        int(MAX_LENGTH * 0.03),
-                        int(MAX_LENGTH * 0.1),
-                        int(MAX_LENGTH * 0.04),
-                        int(MAX_LENGTH * 0.28),
-                        int(MAX_LENGTH * 0.05),
-                        int(MAX_LENGTH * 0.42),
+                if show_status:
+                    table.set_cols_width([
+                            int(MAX_LENGTH * 0.03), #No
+                            int(MAX_LENGTH * 0.1),  #Name
+                            int(MAX_LENGTH * 0.04), #PID
+                            int(MAX_LENGTH * 0.28), #EXE
+                            int(MAX_LENGTH * 0.05), #Mem
+                            int(MAX_LENGTH * 0.36), #CMD
+                            int(MAX_LENGTH * 0.06), #Status
+                        ])
+                else:
+                    table.set_cols_width([
+                        int(MAX_LENGTH * 0.03), #No
+                        int(MAX_LENGTH * 0.1),  #Name
+                        int(MAX_LENGTH * 0.04), #PID
+                        int(MAX_LENGTH * 0.28), #Mem
+                        int(MAX_LENGTH * 0.05), #CMD
+                        int(MAX_LENGTH * 0.42), #Status
                     ])
             
         sys.dont_write_bytecode = True
         number = 1
-        #print "sorted =", sorted
-        if not sorted:
+        number_nework = 1
+        if not sort:
+            if filter:
+                data = {}
+                m = 1
+                for x in data_search.keys():
+                    if os.path.splitext(data_search.get(x).get('name'))[0].lower() in filter:
+                        data.update({m: data_search.get(x)})
+                        m +=1
+                data_search = data
+                debug(data_search=data_search)
             for i in data_search:
-                name = data_search.get(i).get('name')
-                pid = data_search.get(i).get('pid')
-                exe =  data_search.get(i).get('exe')
-                cpu =  data_search.get(i).get('cpu')
-                cmd = " ".join(data_search.get(i).get('cmd'))
-                mem = convert_size(data_search.get(i).get('mem'))
-                time = data_search.get(i).get('time')
-                
-                try:
-                    table.add_row([
-                        str(number),
-                        name,
-                        str(pid),
-                        exe,
-                        mem,
-                        cpu, 
-                        cmd
-                    ])
-                    #table.add_row([
-                        #str(number),
-                        #make_colors(name, 'lightyellow', color_type= 'colorama'),
-                        #make_colors(str(pid), 'lightblue', color_type= 'colorama'),
-                        #make_colors(exe, 'lightgreen', color_type= 'colorama'),
-                        #make_colors(cmd, 'lightcyan', color_type= 'co2lorama')
-                        #])
-                except:
-                    if show_cpu:
-                        table.add_row([
-                            str(number),
-                            unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                        ])
-                    else:
-                        table.add_row([
-                            str(number),
-                            unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                        ])
-                number += 1
-            if data_filter:
-                for i in data_filter:
-                    name = data_filter.get(i).get('name')
-                    pid = data_filter.get(i).get('pid')
-                    exe =  data_filter.get(i).get('exe')
-                    cpu =  data_filter.get(i).get('cpu')
-                    cmd = " ".join(data_filter.get(i).get('cmd'))
-                    mem = convert_size(data_filter.get(i).get('mem'))
-                    time = data_filter.get(i).get('time')
-                    
-                    try:
-                        table.add_row([
-                                str(number),
-                                name,
-                                str(pid),
-                                exe,
-                                mem,
-                                cpu, 
-                                cmd
-                            ])
-                    except:
-                        if show_cpu:
-                            table.add_row([
-                                    str(number),
-                                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                            ])
-                        else:
-                            table.add_row([
-                                    str(number),
-                                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                            ])            
-            #if sys.stdout.encoding != 'cp850':
-                #sys.stdout = codecs.getwriter('utf-8')(sys.stdout, 'strict')
-            #if sys.stderr.encoding != 'cp850':
-                #sys.stderr = codecs.getwriter('utf-8')(sys.stderr, 'strict')
+                name, pid, exe, cmd, cpu, time, status, mem, connections = getData(i, False, data_search)
+                if not show_status:
+                    status = None
+                if show_networks or show_networks_only:
+                    if connections:
+                        fd, type, protocol, local_address, local_port, remote_address, remote_port, status_network = getDataNetworks(connections)
+                        table, number_nework = makeTableAddNetworks(table, number_nework, name, pid, exe, local_address, local_port, remote_address, remote_port, fd, type, protocol, status_network, print_networks_only=False)
+                else:
+                    table = makeTableAdd(table, number, name, pid, exe, mem, cpu, cmd, show_cpu, status)
                 number += 1
         else:
+            if filter:
+                data = []
+                for x in data_search:
+                    if os.path.splitext(x[1].get('name'))[0].lower() in filter:
+                        data.append(x)
+                data_search = data
+            
             for i in data_search:
-                name = i[1].get('name')
-                pid = i[1].get('pid')
-                exe = i[1].get('exe')
-                cpu = i[1].get('cpu')
-                cmd = " ".join(i[1].get('cmd'))
-                mem = convert_size(i[1].get('mem'))
-                
-                try:
-                    table.add_row([
-                        str(number),
-                        name,
-                        str(pid),
-                        exe,
-                        mem,
-                        cpu, 
-                        cmd
-                    ])
-                    #table.add_row([
-                        #str(number),
-                        #make_colors(name, 'lightyellow', color_type= 'colorama'),
-                        #make_colors(str(pid), 'lightblue', color_type= 'colorama'),
-                        #make_colors(exe, 'lightgreen', color_type= 'colorama'),
-                        #make_colors(cmd, 'lightcyan', color_type= 'co2lorama')
-                        #])
-                except:
-                    if show_cpu:
-                        table.add_row([
-                            str(number),
-                            unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                        ])
-                    else:
-                        table.add_row([
-                            str(number),
-                            unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                            unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                        ])
+                name, pid, exe, cmd, cpu, time, status, mem, connections = getData(i, True, data_search)
+                if not show_status:
+                    status = None
+                if show_networks or show_networks_only:
+                    if connections:
+                        fd, type, protocol, local_address, local_port, remote_address, remote_port, status_network = getDataNetworks(connections)
+                        table, number_nework = makeTableAddNetworks(table, number_nework, name, pid, exe, local_address, local_port, remote_address, remote_port, fd, type, protocol, status_network, print_networks_only=False)
+                else:
+                    table = makeTableAdd(table, number, name, pid, exe, mem, cpu, cmd, show_cpu, status)
                 number += 1
-            if data_filter:
-                for i in data_filter:
-                    name = i[1].get('name')
-                    pid = i[1].get('pid')
-                    exe =  i[1].get('exe')
-                    cpu =  i[1].get('cpu')
-                    cmd = " ".join(i[1].get('cmd'))
-                    mem = convert_size(i[1].get('mem'))
-                
-                    try:
-                        table.add_row([
-                                str(number),
-                                name,
-                                str(pid),
-                                exe,
-                                mem,
-                                cpu, 
-                                cmd
-                            ])
-                    except:
-                        if show_cpu:
-                            table.add_row([
-                                    str(number),
-                                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(cpu).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                            ])
-                        else:
-                            table.add_row([
-                                    str(number),
-                                    unicode(name).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(str(pid)).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(exe).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(mem).encode(sys.stdout.encoding, errors='replace'),
-                                    unicode(cmd).encode(sys.stdout.encoding, errors='replace'), 
-                            ])            
-            #if sys.stdout.encoding != 'cp850':
-                #sys.stdout = codecs.getwriter('utf-8')(sys.stdout, 'strict')
-            #if sys.stderr.encoding != 'cp850':
-                #sys.stderr = codecs.getwriter('utf-8')(sys.stderr, 'strict')
-                number += 1
+
         print table.draw()
-    return data_search, data_filter, number
+    return data_search, number
 
 def sort_dict(myDict, value_sort_name, reverse = False):
     dicts = myDict.items()
@@ -457,32 +634,65 @@ def get_child(pid, separated = True, process_instance = None, memory_detail = Fa
                 print "+" * 100                        
     
 
-def ps(pfilter = None, sort = None, reverse = False, show_all = False, show_cpu = False):
+# def ps(pfilter = None, sort = None, reverse = False, show_all = False, show_cpu = False):
+def ps(show_cpu=False, show_all=False):
     list_process = {}
-    list_filter = {}
     n = 1
     for process in psutil.process_iter():
-        #debug(process = process)
-        name, exe, cmd, mem = "", "", [], ()
-        try:
-            name = process.name()
-            cmd = process.cmdline()
-            exe = process.exe()
-            pid = process.pid
-            if show_cpu:
-                cpu = process.cpu_percent(interval = 0.116)
-            else:
-                cpu = 0.0
-            #debug(cpu = cpu)
-            mem = process.memory_full_info().vms
-            time = process._create_time
-            if pfilter and isinstance(pfilter, list):
-                for i in pfilter:
-                    if show_all == False and os.path.basename(__file__) in " ".join(cmd):
+        with process.oneshot():
+            list_network = {}
+            name, exe, cmd, mem = "", "", [], ()
+            try:
+                name = process.name()   
+                try:
+                    cmd = process.cmdline()
+                except psutil.AccessDenied:
+                    cmd = ''
+                try:
+                    exe = process.exe()
+                except psutil.AccessDenied:
+                    exe = ''
+                pid = process.pid
+                if show_cpu:
+                    # cpu = process.cpu_percent(interval = 0.116)
+                    cpu = process.cpu_percent()
+                else:
+                    cpu = 0.0
+                try:
+                    mem = process.memory_full_info().vms
+                except psutil.AccessDenied:
+                    mem = ''
+                time = process._create_time
+                status = process.status()
+                connections = process.connections()
+                if connections:
+                    fd, protocol, type, laddr, raddr, status_networks = connections[0]
+                    if laddr:
+                        laddr = (laddr[0], laddr[1])
+                    if raddr:
+                        laddr = (raddr[0], raddr[1])
+                    if type == 1:
+                        type = 'TCP'
+                    elif type == 2:
+                        type = 'UDP'
+                    if protocol == 2:
+                        protocol = 'IPv4'
+                    elif protocol == 23:
+                        protocol = 'IPv6'
+                    list_network.update({
+                        'fd':fd,
+                        'protocol':protocol,
+                        'type':type,
+                        'laddr':laddr,
+                        'raddr':raddr,
+                        'status':status_networks
+                        })
+
+                if not show_all:
+                    if str(pid) == str(PID):
                         pass
                     else:
-                        if str(i).strip().lower() in str(name).lower():
-                            list_filter.update({
+                        list_process.update({
                                 n: {
                                     'name': name,
                                     'cmd': cmd,
@@ -491,51 +701,18 @@ def ps(pfilter = None, sort = None, reverse = False, show_all = False, show_cpu 
                                     'cpu': cpu,
                                     'mem': mem,
                                     'time': time,
+                                    'status': status,
+                                    'connections': list_network
                                     },
-                            })
-                    n += 1
-            if pfilter:
-                if name in pfilter or str(pid) in pfilter:
-                    pass
-                elif show_all == False and os.path.basename(__file__) in " ".join(cmd):
-                    pass
-                else:
-                    list_process.update({
-                        n: {
-                            'name': name,
-                            'cmd': cmd,
-                            'exe': exe,
-                            'pid': pid,
-                            'cpu': cpu,
-                            'mem': mem,
-                            'time': time,
-                            },
-                    })                    
-            else:
-                if show_all == False and os.path.basename(__file__) in " ".join(cmd):
-                    pass
-                else:
-                    list_process.update({
-                            n: {
-                                'name': name,
-                                'cmd': cmd,
-                                'exe': exe,
-                                'pid': pid,
-                                'cpu': cpu,
-                                'mem': mem,
-                                'time': time,
-                                },
-                        })                
-            n += 1
-        except (psutil.AccessDenied, psutil.ZombieProcess):
-            pass
-        except psutil.NoSuchProcess:
-            continue
+                            })                
+                        n += 1
+            # except (psutil.AccessDenied, psutil.ZombieProcess):
+            except psutil.ZombieProcess:
+                print "ZombieProcess=", process
+            except psutil.NoSuchProcess:
+                print "Process Inai =", process
 
-    if sort:
-        return sort_dict(list_process, sort, reverse),  sort_dict(list_filter, sort, reverse)
-    else:
-        return list_process, list_filter
+    return list_process, process
 
 def kill(kills, always_kill = False):
     list_process, list_filter = ps()
@@ -801,7 +978,6 @@ def search(query, kill = False, fast = False, memory_detail = False, child_detai
                         else:
                             n_check = list_process.get(n).get('exe')[0]
                         if str(i) == n_check.lower():
-                            #print "XXX =", list_process.get(n).get('exe')[0].lower()
                             ver += 1
                             p = psutil.Process(list_process.get(n).get('pid'))
                             if kill:
@@ -857,7 +1033,7 @@ def search(query, kill = False, fast = False, memory_detail = False, child_detai
 
 def restart(query):
     import subprocess
-    list_process, list_filter = ps()
+    list_process = ps()
     ver = 0
     for i in query:
         if str(i).isdigit():
@@ -1147,6 +1323,7 @@ Options:
     parse.add_argument('-f', '--filter', help = 'Filter', action = 'store', nargs = '*')
     parse.add_argument('-k', '--kill', help = 'Kill process with name or PID', action = 'store', nargs = '*')
     parse.add_argument('-K', '--always-kill', help = 'Kill process with name or PID', action = 'store', nargs = '*')
+    parse.add_argument('-S', '--show-status', help = 'Show status process', action = 'store_true')
     parse.add_argument('-s', '--sort-by', help = 'Sort list by [name, pid, exe, mem, cmd]', action = 'store', type = str)
     parse.add_argument('-t', '--sort-time', help = 'Sort list by time of start/creation', action = 'store_true')
     parse.add_argument('-m', '--sort-mem', help = 'Sort list by Private Memory usage', action = 'store_true')
@@ -1165,8 +1342,12 @@ Options:
     parse.add_argument('-c', '--childs', help = 'Show all Childs process of process', action = 'store_true')
     parse.add_argument('-M', '--memory-details', help = 'Show all memory details of process', action = 'store_true')
     parse.add_argument('-d', '--details', help = 'Show all details of process', action = 'store_true')
+    parse.add_argument('-l', '--list-details', help = 'Show all details of process', action = 'store_true')
+    parse.add_argument('-F', '--fast-list-details', help = 'Show all details of process', action = 'store_true')
     parse.add_argument('-C', '--show-cpu-percent', help = 'Show CPU Load Percent', action = 'store_true')
     parse.add_argument('-MM', '--memory-detail', help = 'Show all memory detail of one process by given pid or correct name', action = 'store', type = int)
+    parse.add_argument('-N', '--show-networks', help='Show with networks connection if available, this is only for list mode, for table mode (default) there is only networks connection showing', action='store_true')
+    parse.add_argument('-No', '--show-networks-only', help='Show networks connection only if available', action='store_true')
     args = parse.parse_args()
     #print "args.filter =", args.filter
     #if len(sys.argv) == 1:
@@ -1186,61 +1367,37 @@ Options:
     else:
         if args.sort_time:
             sorting = 'time'
-            SORTED = True
         if args.sort_cpu_percent:
             sorting = 'cpu'
-            SORTED = True
         if args.sort_mem:
             sorting = 'mem'
-            SORTED = True
         if args.sort_pid:
             sorting = 'pid'
-            SORTED = True
         if args.sort_exe:
             sorting = 'exe'
-            SORTED = True
         if args.sort_name:
             sorting = 'name'
-            SORTED = True
         if args.sort_by:
-            SORTED = True
+            sorting = args.sort_by
         if args.kill:
             kill(args.kill)
         if args.always_kill:
             kill(args.always_kill, True)
+        pfilter = []
         if args.filter:
-            if sorting == 'cpu' or args.show_cpu_percent:
-                p, p1 = ps(args.filter, sorting, args.reverse, args.all, True)
+            for i in args.filter:
+                pfilter.append(str(i).lower())
+        
+        lister, process = ps(args.show_cpu_percent, args.all)
+        
+        try:
+            makeTable(lister, pfilter, sorting, args.tail, args.show_cpu_percent, args.reverse, args.show_status, args.list_details, args.fast_list_details, args.show_networks, args.show_networks_only)
+        except:
+            if os.getenv('DEBUG') or os.getenv('debug'):
+                traceback.format_exc(print_msg= True)
             else:
-                p, p1 = ps(args.filter, sorting, args.reverse, args.all)
-            try:
-                if sorting == 'cpu' or args.show_cpu_percent:
-                    makeTable(p, p1, SORTED, args.tail, True)
-                else:
-                    makeTable(p, p1, SORTED, args.tail)
-            except:
-                if os.getenv('DEBUG') or os.getenv('debug'):
-                    traceback.format_exc(print_msg= True)
-                else:
-                    traceback.format_exc(print_msg= False)
-                pass
-        else:
-            if not args.kill and not args.always_kill and not args.search and not args.search_kill:
-                if sorting == 'cpu' or args.show_cpu_percent:
-                    p, p1 = ps(args.filter, sorting, args.reverse, args.all, True)
-                else:
-                    p, p1 = ps(args.filter, sorting, args.reverse, args.all)
-                try:
-                    if sorting == 'cpu' or args.show_cpu_percent:
-                        makeTable(p, p1, SORTED, args.tail, True)
-                    else:
-                        makeTable(p, p1, SORTED, args.tail)
-                except:
-                    if os.getenv('DEBUG') or os.getenv('debug'):
-                        traceback.format_exc(print_msg= True)
-                    else:
-                        traceback.format_exc(print_msg= False)
-                    parse.print_help()
+                traceback.format_exc(print_msg= False)
+            pass
         
 if __name__ == '__main__':
     #p, p1 = ps()
