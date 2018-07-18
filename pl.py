@@ -20,7 +20,7 @@ import math
 import traceback
 import random
 import cmdw
-#from debug import * 
+from debug import * 
 PID = os.getpid()
 
 class ProcessList(object):
@@ -130,8 +130,10 @@ class ProcessList(object):
         return name, number_out
 
     def getData(self, i, sort=False, data_search=None):
+        debug(data_search = data_search)
+        debug(SORT = sort)
         list_networks = []
-        mem = data_search.get(i).get('mem')
+        
         if not sort:
             name = data_search.get(i).get('name')
             pid = data_search.get(i).get('pid')
@@ -331,6 +333,7 @@ class ProcessList(object):
         if fast_list_mode:
             list_details = True
         # debug(data_search0 = data_search)
+        debug(sort = sort)
         if sort:
             data_search = self.sort_dict(data_search, sort, reverse)
             if tail:
