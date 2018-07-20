@@ -130,7 +130,7 @@ class ProcessList(object):
         return name, number_out
 
     def getData(self, i, sort=False, data_search=None):
-        debug(data_search = data_search)
+        #debug(data_search = data_search)
         debug(SORT = sort)
         list_networks = []
         
@@ -707,10 +707,8 @@ class ProcessList(object):
                     print "+" * 100                        
 
 
-    def psItem(self, process, show_cpu=False, show_all=False, user='all', pid = None, list_process = None):
-        if not list_process:
-            list_process = {}
-        n = 1        
+    def psItem(self, process, n, show_cpu=False, show_all=False, user='all', pid = None, process_dict = None):
+        #n = 1        
         with process.oneshot():
             list_network = {}
             name, exe, cmd, mem = "", "", [], ()
@@ -760,7 +758,7 @@ class ProcessList(object):
                     if str(pid) == str(PID):
                         pass
                     else:
-                        list_process.update({
+                        process_dict.update({
                             n: {
                                     'name': name,
                                     'cmd': cmd,
@@ -826,7 +824,7 @@ class ProcessList(object):
                         if str(pid) == str(PID):
                             pass
                         else:
-                            list_process.update({
+                            process_dict.update({
                                 n: {
                                         'name': name,
                                         'cmd': cmd,
@@ -847,15 +845,16 @@ class ProcessList(object):
                 print "Process Inai =", process
             except:
                 traceback.format_exc()
-        return list_process
+        return process_dict, n
                 
     def ps(self, show_cpu=False, show_all=False, user='all', pid = None):
         list_process = {}
+        n = 1
         if pid:
             process = psutil.Process(pid)
-            list_process = self.psItem(process, show_cpu, show_all, user, pid, list_process)
+            dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, list_process)
         for process in psutil.process_iter():
-            list_process = self.psItem(process, show_cpu, show_all, user, pid, list_process)
+            dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, list_process)
             #debug(list_process = list_process)
             #list_process.update(list_process_add)
         debug(list_process_x = list_process)
