@@ -135,6 +135,10 @@ class ProcessList(object):
         list_networks = []
         
         if not sort:
+            try:
+                mem = data_search.get(i).get('mem')
+            except:
+                mem = ''            
             name = data_search.get(i).get('name')
             pid = data_search.get(i).get('pid')
             exe =  data_search.get(i).get('exe')
@@ -703,54 +707,120 @@ class ProcessList(object):
                     print "+" * 100                        
 
 
-    def ps(self, show_cpu=False, show_all=False, user='all'):
-        list_process = {}
-        n = 1
-        for process in psutil.process_iter():
-            with process.oneshot():
-                list_network = {}
-                name, exe, cmd, mem = "", "", [], ()
-                try:
+    def psItem(self, process, show_cpu=False, show_all=False, user='all', pid = None, list_process = None):
+        if not list_process:
+            list_process = {}
+        n = 1        
+        with process.oneshot():
+            list_network = {}
+            name, exe, cmd, mem = "", "", [], ()
+            try:
+                name = process.name()   
+                cmd = process.cmdline()
+                exe = process.exe()
+                pid = process.pid
+                if show_cpu:
+                    # cpu = process.cpu_percent(interval = 0.116)
+                    cpu = process.cpu_percent()
+                else:
+                    cpu = 0.0
+                mem = process.memory_full_info().vms
+                time = process._create_time
+                status = process.status()
+                connections = process.connections()
+                if connections:
+                    nn = 1
+                    for i in connections:
+                        fd, protocol, type, laddr, raddr, status_networks = i
+                        if laddr:
+                            laddr = (laddr[0], laddr[1])
+                        if raddr:
+                            laddr = (raddr[0], raddr[1])
+                        if type == 1:
+                            type = 'TCP'
+                        elif type == 2:
+                            type = 'UDP'
+                        if protocol == 2:
+                            protocol = 'IPv4'
+                        elif protocol == 23:
+                            protocol = 'IPv6'
+                        list_network.update({
+                            nn: {
+                                'fd':fd,
+                                'protocol':protocol,
+                                'type':type,
+                                'laddr':laddr,
+                                'raddr':raddr,
+                                'status':status_networks
+                            }
+                        })
+                        nn += 1
+
+                if not show_all:
+                    if str(pid) == str(PID):
+                        pass
+                    else:
+                        list_process.update({
+                            n: {
+                                    'name': name,
+                                    'cmd': cmd,
+                                    'exe': exe,
+                                    'pid': pid,
+                                    'cpu': cpu,
+                                    'mem': mem,
+                                    'time': time,
+                                    'status': status,
+                                    'connections': list_network
+                                    },
+                        })                
+                        n += 1
+            # except (psutil.AccessDenied, psutil.ZombieProcess):
+            except psutil.AccessDenied:
+                if user == 'all' :
                     name = process.name()   
-                    cmd = process.cmdline()
-                    exe = process.exe()
+                    try:
+                        cmd = process.cmdline()
+                    except psutil.AccessDenied:
+                        cmd = ''
+                    try:
+                        exe = process.exe()
+                    except psutil.AccessDenied:
+                        exe = ''
                     pid = process.pid
                     if show_cpu:
                         # cpu = process.cpu_percent(interval = 0.116)
                         cpu = process.cpu_percent()
                     else:
                         cpu = 0.0
-                    mem = process.memory_full_info().vms
+                    try:
+                        mem = process.memory_full_info().vms
+                    except psutil.AccessDenied:
+                        mem = ''
                     time = process._create_time
                     status = process.status()
                     connections = process.connections()
                     if connections:
-                        nn = 1
-                        for i in connections:
-                            fd, protocol, type, laddr, raddr, status_networks = i
-                            if laddr:
-                                laddr = (laddr[0], laddr[1])
-                            if raddr:
-                                laddr = (raddr[0], raddr[1])
-                            if type == 1:
-                                type = 'TCP'
-                            elif type == 2:
-                                type = 'UDP'
-                            if protocol == 2:
-                                protocol = 'IPv4'
-                            elif protocol == 23:
-                                protocol = 'IPv6'
-                            list_network.update({
-                                nn: {
-                                    'fd':fd,
-                                    'protocol':protocol,
-                                    'type':type,
-                                    'laddr':laddr,
-                                    'raddr':raddr,
-                                    'status':status_networks
-                                }
-                            })
-                            nn += 1
+                        fd, protocol, type, laddr, raddr, status_networks = connections[0]
+                        if laddr:
+                            laddr = (laddr[0], laddr[1])
+                        if raddr:
+                            laddr = (raddr[0], raddr[1])
+                        if type == 1:
+                            type = 'TCP'
+                        elif type == 2:
+                            type = 'UDP'
+                        if protocol == 2:
+                            protocol = 'IPv4'
+                        elif protocol == 23:
+                            protocol = 'IPv6'
+                        list_network.update({
+                            'fd':fd,
+                            'protocol':protocol,
+                            'type':type,
+                            'laddr':laddr,
+                            'raddr':raddr,
+                            'status':status_networks
+                        })
 
                     if not show_all:
                         if str(pid) == str(PID):
@@ -770,81 +840,26 @@ class ProcessList(object):
                                         },
                             })                
                             n += 1
-                # except (psutil.AccessDenied, psutil.ZombieProcess):
-                except psutil.AccessDenied:
-                    if user == 'all' :
-                        name = process.name()   
-                        try:
-                            cmd = process.cmdline()
-                        except psutil.AccessDenied:
-                            cmd = ''
-                        try:
-                            exe = process.exe()
-                        except psutil.AccessDenied:
-                            exe = ''
-                        pid = process.pid
-                        if show_cpu:
-                            # cpu = process.cpu_percent(interval = 0.116)
-                            cpu = process.cpu_percent()
-                        else:
-                            cpu = 0.0
-                        try:
-                            mem = process.memory_full_info().vms
-                        except psutil.AccessDenied:
-                            mem = ''
-                        time = process._create_time
-                        status = process.status()
-                        connections = process.connections()
-                        if connections:
-                            fd, protocol, type, laddr, raddr, status_networks = connections[0]
-                            if laddr:
-                                laddr = (laddr[0], laddr[1])
-                            if raddr:
-                                laddr = (raddr[0], raddr[1])
-                            if type == 1:
-                                type = 'TCP'
-                            elif type == 2:
-                                type = 'UDP'
-                            if protocol == 2:
-                                protocol = 'IPv4'
-                            elif protocol == 23:
-                                protocol = 'IPv6'
-                            list_network.update({
-                                'fd':fd,
-                                'protocol':protocol,
-                                'type':type,
-                                'laddr':laddr,
-                                'raddr':raddr,
-                                'status':status_networks
-                            })
 
-                        if not show_all:
-                            if str(pid) == str(PID):
-                                pass
-                            else:
-                                list_process.update({
-                                    n: {
-                                            'name': name,
-                                            'cmd': cmd,
-                                            'exe': exe,
-                                            'pid': pid,
-                                            'cpu': cpu,
-                                            'mem': mem,
-                                            'time': time,
-                                            'status': status,
-                                            'connections': list_network
-                                            },
-                                })                
-                                n += 1
-
-                except psutil.ZombieProcess:
-                    print "ZombieProcess=", process
-                except psutil.NoSuchProcess:
-                    print "Process Inai =", process
-                except:
-                    traceback.format_exc()
-
-        return list_process, process
+            except psutil.ZombieProcess:
+                print "ZombieProcess=", process
+            except psutil.NoSuchProcess:
+                print "Process Inai =", process
+            except:
+                traceback.format_exc()
+        return list_process
+                
+    def ps(self, show_cpu=False, show_all=False, user='all', pid = None):
+        list_process = {}
+        if pid:
+            process = psutil.Process(pid)
+            list_process = self.psItem(process, show_cpu, show_all, user, pid, list_process)
+        for process in psutil.process_iter():
+            list_process = self.psItem(process, show_cpu, show_all, user, pid, list_process)
+            #debug(list_process = list_process)
+            #list_process.update(list_process_add)
+        debug(list_process_x = list_process)
+        return list_process
 
     def kill(self, kills, always_kill = False):
         list_process, list_filter = self.ps()
@@ -1524,7 +1539,7 @@ class ProcessList(object):
                 user = 'all'
             else:
                 user = ''
-            lister, process = self.ps(args.show_cpu_percent, args.all, user)
+            lister = self.ps(args.show_cpu_percent, args.all, user)
 
             try:
                 self.makeTable(lister, pfilter, sorting, args.tail, args.show_cpu_percent, args.reverse, args.show_status, args.list_details, args.fast_list_details, args.show_networks, args.show_networks_only)
