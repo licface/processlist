@@ -22,6 +22,8 @@ import random
 import cmdw
 from debug import * 
 PID = os.getpid()
+from pprint import pprint
+import textwrap
 
 class ProcessList(object):
     def __init__(self):
@@ -126,12 +128,13 @@ class ProcessList(object):
             print "FD             :", make_colors(str(fd), 'lightgreen', color_type= 'colorama')
             print "PROTOCOL       :", make_colors(str(type), 'lightmagenta', color_type= 'colorama')
             print "SOCK           :", make_colors(str(family), 'lightred', color_type= 'colorama')
+            print "----------------------------"
         
         return name, number_out
 
     def getData(self, i, sort=False, data_search=None):
         #debug(data_search = data_search)
-        debug(SORT = sort)
+        #debug(SORT = sort)
         list_networks = []
         
         if not sort:
@@ -848,18 +851,60 @@ class ProcessList(object):
         return process_dict, n
                 
     def ps(self, show_cpu=False, show_all=False, user='all', pid = None):
-        list_process = {}
+        dict_process = {}
         n = 1
         if pid:
             process = psutil.Process(pid)
-            dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, list_process)
+            dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, dict_process)
         for process in psutil.process_iter():
-            dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, list_process)
-            #debug(list_process = list_process)
-            #list_process.update(list_process_add)
-        debug(list_process_x = list_process)
-        return list_process
+            dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, dict_process)
 
+        return dict_process
+
+    def details(self, pid, print_environ = False):
+        dict_process = {}
+        attrs = [
+            'cpu_affinity',
+            'cpu_times',
+            'create_time',
+            'io_counters',
+            'ionice',
+            'memory_full_info',
+            'memory_maps',
+            'memory_percent',
+            'nice',
+            'num_ctx_switches',
+            'num_handles',
+            'num_threads',
+            'open_files',
+            'ppid',
+            'threads',
+            'username'
+        ]
+        if print_environ:
+            attrs.append('environ')
+        ad_values = make_colors("Process Access Denied or Zoombie Process !", 'white', 'red', attrs = ['bold', 'blink'])
+        dict_process_1 = self.ps(True, pid = pid)
+        #debug(dict_process_1 = dict_process_1)
+        n = max(dict_process_1.keys())
+        dict_process_2 = psutil.Process(pid).as_dict(attrs)
+        #debug(dict_process_2 = dict_process_2)
+        dict_process.update({n: dict_process_2,})
+        #debug(dict_process = dict_process)
+        #pprint(dict_process)
+        
+        list_len_keys = []
+        for i in dict_process.get(n).keys():
+            list_len_keys.append(len(str(i)))
+        for i in dict_process.get(n):
+            if i == 'open_files':
+                print make_colors(str(i).replace("_", " ").upper() + " " * (max(list_len_keys) - len(str(i))), 'magenta', attrs = ['bold']) + " =", list(dict_process.get(n).get(i)[0])[0] + " [" + make_colors(str(list(dict_process.get(n).get(i)[0])[1]), 'yellow', attrs = ['bold']) + "]"
+                for x in range(1, len(dict_process.get(n).get(i))):
+                    print " " * (max(list_len_keys) + 2), list(dict_process.get(n).get(i)[x])[0] + " [" + make_colors(str(list(dict_process.get(n).get(i)[x])[1]), 'yellow', attrs = ['bold']) + "]"
+            else:
+                print make_colors(str(i).replace("_", " ").upper() + " " * (max(list_len_keys) - len(str(i))), 'magenta', attrs = ['bold']) + " =", dict_process.get(n).get(i)
+        
+        
     def kill(self, kills, always_kill = False):
         list_process, list_filter = self.ps()
         #print "-" * 100
@@ -986,197 +1031,80 @@ class ProcessList(object):
             if ver == 0:
                 print "STATUS :", make_colors("NOT FOUND !!!", 'white', 'red', ['bold', 'blink'])
 
-    def search(self, query, kill = False, fast = False, memory_detail = False, child_detail = False, kill_recursive = False):
-        list_process, list_filter = self.ps()
-        ver = 0
-        if fast:
-            list_process1, list_filter1 = self.ps(query, 'time')
-            for p in list_filter1[-len(query):]:
-                try:
-                    x = psutil.Process(p[1].get('pid'))
-                except:
-                    pass
-                print "Name   :", make_colors(str(p[1].get('name')), 'yellow')
-                print "PID    :", make_colors(str(p[1].get('pid')), 'white', 'red')
-                print "EXE    :", make_colors(str(p[1].get('exe')), 'white', 'green')
-                print "MEM    :", make_colors(self.convert_size(p[1].get('mem')), 'white', 'blue')
-                if str(p[1].get('name')) == str(" ".join(p[1].get('cmd'))):
-                    print "CMD    :"
-                elif str(p[1].get('exe')) == str(" ".join(p[1].get('cmd'))):
-                    print "CMD    :"                    
-                else:
-                    print "CMD    :", make_colors(str(" ".join(p[1].get('cmd'))), 'white', 'blue')
-                if kill:
-                    try:
-                        x.terminate()
-                    except:
-                        pass
-                try:
-                    STATUS = x.status()
-                except:
-                    STATUS = "TERMINATED !!!"                    
-                print "STATUS : " + make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                #print make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                if memory_detail:
-                    self.get_memory_full_info(p[1].get('pid'), False)
-                if child_detail:
-                    self.get_child(p[1].get('pid'), False, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
-                print "-" * MAX_LENGTH        
-            #print "list_process =", list_process[-len(query):]
-            #print "list_filter  =", list_filter[-len(query):]
-            #print "-" * 200
+    def search_print(self, dict_process, n, process, kill = False, memory_detail = False, child_detail = False, kill_recursive = False):
+        print "Name   :", make_colors(str(dict_process.get(n).get('name')), 'yellow')
+        print "PID    :", make_colors(str(dict_process.get(n).get('pid')), 'white', 'red')
+        print "EXE    :", make_colors(str(dict_process.get(n).get('exe')), 'white', 'green')
+        print "MEM    :", make_colors(self.convert_size(dict_process.get(n).get('mem')), 'white', 'blue')
+        if str(dict_process.get(n).get('name')) == str(" ".join(dict_process.get(n).get('cmd'))):
+            print "CMD    :"
+        elif str(dict_process.get(n).get('exe')) == str(" ".join(dict_process.get(n).get('cmd'))):
+            print "CMD    :"                    
         else:
-            for i in query:
-                if str(i).isdigit():
-                    for n in list_process:
-                        if int(i) == list_process.get(n).get('pid'):
-                            p = psutil.Process(int(i))
-                            print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
-                            print "PID    :", make_colors(str(list_process.get(n).get('pid')), 'white', 'red')
-                            print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
-                            print "MEM    :", make_colors(self.convert_size(list_process.get(n).get('mem')), 'white', 'blue')
-                            if str(list_process.get(n).get('name')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                print "CMD    :"
-                            elif str(list_process.get(n).get('exe')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                print "CMD    :"                    
-                            else:
-                                print "CMD    :", make_colors(str(" ".join(list_process.get(n).get('cmd'))), 'white', 'blue')
-                            if kill:
-                                p.terminate()                        
+            print "CMD    :", make_colors(str(" ".join(dict_process.get(n).get('cmd'))), 'white', 'blue')
+        if kill:
+            process.terminate()                        
+        try:
+            STATUS = process.status()
+        except:
+            STATUS = "TERMINATED !!!"                    
+        print "STATUS : " + make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
+        #print make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
+        if memory_detail:
+            self.get_memory_full_info(dict_process.get(n).get('pid'), False)
+        if child_detail:
+            self.get_child(dict_process.get(n).get('pid'), True, process_instance= p, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
+        print "-" * MAX_LENGTH
+        
+    def search(self, search_string, kill = False, fast = False, memory_detail = False, child_detail = False, kill_recursive = False):
+        dict_process= self.ps()
+        debug(search_string = search_string)
+        for i in search_string:
+            if str(i).isdigit():
+                for n in dict_process:
+                    if int(i) == dict_process.get(n).get('pid'):
+                        p = psutil.Process(int(i))
+                        try:
+                            self.search_print(dict_process, n, p, kill, memory_detail, child_detail, kill_recursive)
+                        except psutil.NoSuchProcess:
+                            print "Process already Gone !"
+                        except:
+                            traceback.format_exc()                        
+            else:
+                for n in dict_process:
+                    if str(i).lower() == os.path.splitext(dict_process.get(n).get('name').lower())[0]:
+                        try:
+                            p = psutil.Process(dict_process.get(n).get('pid'))
+                            self.search_print(dict_process, n, p, kill, memory_detail, child_detail, kill_recursive)
+                        except psutil.NoSuchProcess:
+                            print "Process already Gone !"
+                        except:
+                            traceback.format_exc()
+                    else:   
+                        if str(i).lower() in dict_process.get(n).get('name').lower():
                             try:
-                                STATUS = p.status()
-                            except:
-                                STATUS = "TERMINATED !!!"                    
-                            print "STATUS : " + make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                            #print make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                            if memory_detail:
-                                self.get_memory_full_info(list_process.get(n).get('pid'), False)
-                            if child_detail:
-                                self.get_child(list_process.get(n).get('pid'), True, process_instance= p, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
-                            print "-" * MAX_LENGTH
-                else:
-                    for n in list_process:
-                        if str(i).lower() == list_process.get(n).get('name').lower():
-                            ver += 1
-                            try:
-                                p = psutil.Process(list_process.get(n).get('pid'))
-                                print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
-                                print "PID    :", make_colors(str(list_process.get(n).get('pid')), 'white', 'red')
-                                print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
-                                print "MEM    :", make_colors(self.convert_size(list_process.get(n).get('mem')), 'white', 'blue')
-                                if str(list_process.get(n).get('name')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                    print "CMD    :"
-                                elif str(list_process.get(n).get('exe')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                    print "CMD    :"
-                                else:
-                                    print "CMD    :", make_colors(str(" ".join(list_process.get(n).get('cmd'))), 'white', 'blue')
-                                if kill:
-                                    p.terminate()                            
-                                try:
-                                    STATUS = p.status()
-                                except:
-                                    STATUS = "TERMINATED !!!"                    
-                                print "STATUS :", make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                                if memory_detail:
-                                    self.get_memory_full_info(list_process.get(n).get('pid'), False)
-                                if child_detail:
-                                    self.get_child(list_process.get(n).get('pid'), True, memory_detail= memory_detail, tab = 1, kill = kill_recursive) 
-                                print "-" * MAX_LENGTH
+                                p = psutil.Process(dict_process.get(n).get('pid'))
+                                self.search_print(dict_process, n, p, kill, memory_detail, child_detail, kill_recursive)
                             except psutil.NoSuchProcess:
-                                pass
+                                print "Process already Gone !"
                             except:
                                 traceback.format_exc()
                         else:
-                            if str(i).lower() in list_process.get(n).get('name').lower():
-                                ver += 1
-                                try:
-                                    p = psutil.Process(list_process.get(n).get('pid'))
-                                    print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
-                                    print "PID    :", make_colors(str(list_process.get(n).get('pid')), 'white', 'red')
-                                    print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
-                                    print "MEM    :", make_colors(self.convert_size(list_process.get(n).get('mem')), 'white', 'blue')
-                                    if str(list_process.get(n).get('name')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                        print "CMD    :"
-                                    elif str(list_process.get(n).get('exe')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                        print "CMD    :"
-                                    else:
-                                        print "CMD    :", make_colors(str(" ".join(list_process.get(n).get('cmd'))), 'white', 'blue')
-                                    if kill:
-                                        p.terminate()                                
-                                    try:
-                                        STATUS = p.status()
-                                    except:
-                                        STATUS = "TERMINATED !!!"                    
-                                    print "STATUS :", make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                                    if memory_detail:
-                                        self.get_memory_full_info(list_process.get(n).get('pid'), False)
-                                    if child_detail:
-                                        self.get_child(list_process.get(n).get('pid'), True, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
-                                    print "-" * MAX_LENGTH
-                                except psutil.NoSuchProcess:
-                                    pass
-                                except:
-                                    traceback.format_exc()
-                    if ver == 0:
-                        for n in list_process:
                             if not sys.platform == 'win32':
-                                n_check = list_process.get(n).get('exe')
+                                n_check = dict_process.get(n).get('exe')
                             else:
-                                n_check = list_process.get(n).get('exe')[0]
-                            if str(i) == n_check.lower():
-                                ver += 1
-                                p = psutil.Process(list_process.get(n).get('pid'))
-                                if kill:
-                                    p.terminate()
-                                try:
-                                    STATUS = p.status()
-                                except:
-                                    STATUS = "TERMINATED !!!"                        
-                                print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
-                                print "PID    :", make_colors(str(list_process.get(n).get('pid')), 'white', 'red')
-                                print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
-                                print "MEM    :", make_colors(self.convert_size(list_process.get(n).get('mem')), 'white', 'blue')
-                                if str(list_process.get(n).get('name')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                    print "CMD    :"
-                                elif str(list_process.get(n).get('exe')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                    print "CMD    :"
+                                if isinstance(dict_process.get(n), list):
+                                    n_check = dict_process.get(n).get('exe')[0]
                                 else:
-                                    print "CMD    :", make_colors(str(" ".join(list_process.get(n).get('cmd'))), 'white', 'blue')                    
-                                print "STATUS :", make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                                if memory_detail:
-                                    self.get_memory_full_info(list_process.get(n).get('pid'), False)
-                                if child_detail:
-                                    self.get_child(list_process.get(n).get('pid'), True, memory_detail= memory_detail, tab = 1, kill = kill_recursive)
-                                print "-" * MAX_LENGTH
+                                    n_check = dict_process.get(n).get('exe')
+                            if str(i) == n_check.lower():
+                                p = psutil.Process(dict_process.get(n).get('pid'))
+                                self.search_print(dict_process, n, p, kill, memory_detail, child_detail, kill_recursive)
                             else:
-                                if str(i) in list_process.get(n).get('exe').lower():
-                                    ver += 1
-                                    p = psutil.Process(list_process.get(n).get('pid'))
-                                    if kill:
-                                        p.terminate()
-                                    try:
-                                        STATUS = p.status()
-                                    except:
-                                        STATUS = "TERMINATED !!!"                        
-                                    print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
-                                    print "PID    :", make_colors(str(list_process.get(n).get('pid')), 'white', 'red')
-                                    print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
-                                    print "MEM    :", make_colors(self.convert_size(list_process.get(n).get('mem')), 'white', 'blue')
-                                    if str(list_process.get(n).get('name')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                        print "CMD    :"
-                                    elif str(list_process.get(n).get('exe')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                        print "CMD    :"
-                                    else:
-                                        print "CMD    :", make_colors(str(" ".join(list_process.get(n).get('cmd'))), 'white', 'blue')                    
-                                    print "STATUS :", make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                                    if memory_detail:
-                                        self.get_memory_full_info(list_process.get(n).get('pid'), False)
-                                    if child_detail:
-                                        self.get_child(list_process.get(n).get('pid'), True, memory_detail= memory_detail, tab = 1, kill = kill_recursive)  
-                                    print "-" * MAX_LENGTH
-                    if ver == 0:
-                        print make_colors("NOT FOUND !", 'white', 'red', ['bold', 'blink'])
-
+                                if str(i) in dict_process.get(n).get('exe').lower():
+                                    p = psutil.Process(dict_process.get(n).get('pid'))
+                                    self.search_print(dict_process, n, p, kill, memory_detail, child_detail, kill_recursive)
+                                    
     def restart(self, query):
         import subprocess
         list_process, process = self.ps()
@@ -1553,6 +1481,7 @@ if __name__ == '__main__':
     #p, p1 = self.ps()
     #self.makeTable(p)
     c = ProcessList()
+    # c.details(7456)
     c.usage()
     #query = ['python', 'fmedia']
     #self.search(query, False, True)
