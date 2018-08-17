@@ -1107,7 +1107,7 @@ class ProcessList(object):
                                     
     def restart(self, query):
         import subprocess
-        list_process, process = self.ps()
+        list_process = self.ps()
         ver = 0
         for i in query:
             if str(i).isdigit():
