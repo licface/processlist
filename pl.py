@@ -12,8 +12,6 @@ MAX_LENGTH = cmdw.getWidth() - 4
 if not sys.platform == 'win32':
     MAX_LENGTH = MAX_LENGTH - 4
 from make_colors import make_colors
-import colorama
-colorama.init(autoreset=True)
 import time
 import os
 import math
@@ -43,18 +41,18 @@ class ProcessList(object):
 
     def printList(self, name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number="*"):
         if fast_list_mode:
-            print str(number) + ". " + make_colors(str(name), 'lightcyan', color_type= 'colorama') + " " \
-                  + "[" + make_colors(str(pid), 'lightyellow', color_type= 'colorama') + "]" + " " \
-            + make_colors(str(mem), 'lightgreen', color_type= 'colorama') + " " \
-            + "(" + make_colors(str(status), 'lightmagenta', color_type= 'colorama') + ")"
+            print str(number) + ". " + make_colors(str(name), 'lightcyan') + " " \
+                  + "[" + make_colors(str(pid), 'lightyellow') + "]" + " " \
+            + make_colors(str(mem), 'lightgreen') + " " \
+            + "(" + make_colors(str(status), 'lightmagenta') + ")"
         else:
-            print "NAME   :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
-            print "PID    :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
-            print "EXE    :", make_colors(str(exe), 'lightred', color_type= 'colorama')
-            print "MEM    :", make_colors(str(mem), 'lightgreen', color_type= 'colorama')
-            print "CMD    :", make_colors(str(cmd), 'lightblue', color_type= 'colorama')
-            print "CPU    :", make_colors(str(cpu), 'lightcyan', color_type= 'colorama')
-            print "STATUS :", make_colors(str(status), 'lightmagenta', color_type= 'colorama')
+            print "NAME   :", make_colors(str(name), 'lightcyan')
+            print "PID    :", make_colors(str(pid), 'lightyellow')
+            print "EXE    :", make_colors(str(exe), 'lightred')
+            print "MEM    :", make_colors(str(mem), 'lightgreen')
+            print "CMD    :", make_colors(str(cmd), 'lightblue')
+            print "CPU    :", make_colors(str(cpu), 'lightcyan')
+            print "STATUS :", make_colors(str(status), 'lightmagenta')
 
     def printListNetworks(self, local_address, local_port, remote_address, remote_port, status, type, family, fd, fast_list_mode, number=None, name=None, pid=None, dont_print_number=True, mode_tree=True, fast_group = True):
         number_out = number
@@ -104,30 +102,30 @@ class ProcessList(object):
                         tree_add_2 = ''
                         number_out += 1
                 try:
-                    sys.stdout.write(tree_add_2 + number + make_colors(str(name), 'lightcyan', color_type= 'colorama') \
-                    + make_colors(pid, 'lightyellow', color_type= 'colorama') + " " \
-                    + "[" + "local=" + make_colors(str(local_address) + ":" + str(local_port), 'lightgreen', color_type= 'colorama') + "]" + " " \
-                    + "[" + "remote=" + make_colors(str(remote_address) + ":" + str(remote_port), 'lightblue', color_type= 'colorama') + "]" + " " \
-                    + "(" + make_colors("fd:" + str(fd), 'lightgreen', color_type= 'colorama') \
-                    + "," + make_colors("type:" + str(type), 'lightmagenta', color_type= 'colorama') \
-                    + "," + make_colors("family:" + str(family), 'lightred', color_type= 'colorama') + ")" + " " \
-                    + "| " "STATUS: " + make_colors(str(status), 'lightyellow', color_type= 'colorama') + '\n')
+                    sys.stdout.write(tree_add_2 + number + make_colors(str(name), 'lightcyan') \
+                    + make_colors(pid, 'lightyellow') + " " \
+                    + "[" + "local=" + make_colors(str(local_address) + ":" + str(local_port), 'lightgreen') + "]" + " " \
+                    + "[" + "remote=" + make_colors(str(remote_address) + ":" + str(remote_port), 'lightblue') + "]" + " " \
+                    + "(" + make_colors("fd:" + str(fd), 'lightgreen') \
+                    + "," + make_colors("type:" + str(type), 'lightmagenta') \
+                    + "," + make_colors("family:" + str(family), 'lightred') + ")" + " " \
+                    + "| " "STATUS: " + make_colors(str(status), 'lightyellow') + '\n')
                 except:
                     pass
                 self.NAME = name
 
         else:
             if name and pid:
-                print "NAME           :", make_colors(str(name), 'lightcyan', color_type= 'colorama')
-                print "PID            :", make_colors(str(pid), 'lightyellow', color_type= 'colorama')
-            print "LOCAL ADDRESS  :", make_colors(str(local_address), 'lightgreen', color_type= 'colorama')
-            print "LOCAL PORT     :", make_colors(str(local_port), 'lightgreen', color_type= 'colorama')
-            print "REMOTE ADDRESS :", make_colors(str(remote_address), 'lightblue', color_type= 'colorama')
-            print "REMOTE PORT    :", make_colors(str(remote_port), 'lightblue', color_type= 'colorama')
-            print "STATUS         :", make_colors(str(status), 'lightyellow', color_type= 'colorama')
-            print "FD             :", make_colors(str(fd), 'lightgreen', color_type= 'colorama')
-            print "PROTOCOL       :", make_colors(str(type), 'lightmagenta', color_type= 'colorama')
-            print "SOCK           :", make_colors(str(family), 'lightred', color_type= 'colorama')
+                print "NAME           :", make_colors(str(name), 'lightcyan')
+                print "PID            :", make_colors(str(pid), 'lightyellow')
+            print "LOCAL ADDRESS  :", make_colors(str(local_address), 'lightgreen')
+            print "LOCAL PORT     :", make_colors(str(local_port), 'lightgreen')
+            print "REMOTE ADDRESS :", make_colors(str(remote_address), 'lightblue')
+            print "REMOTE PORT    :", make_colors(str(remote_port), 'lightblue')
+            print "STATUS         :", make_colors(str(status), 'lightyellow')
+            print "FD             :", make_colors(str(fd), 'lightgreen')
+            print "PROTOCOL       :", make_colors(str(type), 'lightmagenta')
+            print "SOCK           :", make_colors(str(family), 'lightred')
             print "----------------------------"
         
         return name, number_out
