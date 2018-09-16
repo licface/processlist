@@ -371,10 +371,12 @@ class ProcessList(object):
                         name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, False, data_search)
                         if show_networks_only:
                             number_network = self.printNetworks(connections, fast_list_mode, number_network, name, pid)
+                            number_network += 1
                         else:
                             self.printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
                             if show_networks:
                                 number_network = self.printNetworks(connections, fast_list_mode, number = number_network)
+                                number_network += 1
                         if not fast_list_mode:
                             print "-" * MAX_LENGTH
                         number += 1
@@ -384,11 +386,11 @@ class ProcessList(object):
                         if os.path.splitext(i[1].get('name'))[0].lower() in filter or i[1].get('pid') in filter:
                             name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, sort)
                             if show_networks_only:
-                                self.printNetworks(connections, fast_list_mode, number)
+                                number = self.printNetworks(connections, fast_list_mode, number)
                             else:
                                 self.printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
                                 if show_networks:
-                                    self.printNetworks(connections, fast_list_mode, number)
+                                    number = self.printNetworks(connections, fast_list_mode, number)
                             if not fast_list_mode:
                                 print "-" * MAX_LENGTH
                             number += 1
@@ -396,11 +398,11 @@ class ProcessList(object):
                     for i in data_search:
                         name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, sort)
                         if show_networks_only:
-                            self.printNetworks(connections, fast_list_mode, number)
+                            number = self.printNetworks(connections, fast_list_mode, number)
                         else:
                             self.printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
                             if show_networks:
-                                self.printNetworks(connections, fast_list_mode, number)
+                                number = self.printNetworks(connections, fast_list_mode, number)
                         if not fast_list_mode:
                             print "-" * MAX_LENGTH
                         number += 1
@@ -852,8 +854,13 @@ class ProcessList(object):
         dict_process = {}
         n = 1
         if pid:
-            process = psutil.Process(pid)
-            dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, dict_process)
+            if isinstance(pid, list):
+                for i in pid:
+                    process = psutil.Process(int(i))
+                    dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, dict_process)                
+            else:
+                process = psutil.Process(int(pid))
+                dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, dict_process)
         else:
             for process in psutil.process_iter():
                 dict_process, n = self.psItem(process, n, show_cpu, show_all, user, pid, dict_process)
@@ -1393,6 +1400,7 @@ class ProcessList(object):
     """
         import argparse
         parse = argparse.ArgumentParser(formatter_class= argparse.RawTextHelpFormatter, version= '1.0')
+        parse.add_argument('-P', '--pid', help = 'Show process by given pid', action = 'store', nargs = '*')
         parse.add_argument('-f', '--filter', help = 'Filter', action = 'store', nargs = '*')
         parse.add_argument('-k', '--kill', help = 'Kill process with name or PID', action = 'store', nargs = '*')
         parse.add_argument('-K', '--always-kill', help = 'Kill process with name or PID', action = 'store', nargs = '*')
@@ -1424,79 +1432,80 @@ class ProcessList(object):
         parse.add_argument('-A', '--user-all', action='store_true', help='Run with current user')
         
         #print "args.filter =", args.filter
-        # if len(sys.argv) == 1:
-        #     p = self.ps()
-        #     self.makeTable(p)
+        if len(sys.argv) == 1:
+            p = self.ps()
+            self.makeTable(p)
         #else:
-        if len(sys.argv) > 1:
-            pids = []
-            for i in sys.argv[1:]:
-                if str(i).isdigit():
-                    pids.append(i)
-            # print "pids =", pids
-            if pids:
-                parse.add_argument('PIDS', action='store', help='Get Process by pids', nargs='*')
-                args = parse.parse_args()
-                for i in pids:
-                    lister = self.ps(True, False, 'all', int(i))
+        elif len(sys.argv) == 2 and sys.argv[1].isdigit():
+            #pids = []
+            #for i in sys.argv[1:]:
+                #if str(i).isdigit():
+                    #pids.append(i)
+            ## print "pids =", pids
+            #if sys.argv[1].isdigit():
+            pids = [sys.argv[1]]
+            parse.add_argument('PIDS', action='store', help='Get Process by pids', nargs='*')
+            args = parse.parse_args()
+            for i in pids:
+                lister = self.ps(True, False, 'all', int(i))
 
-                    try:
-                        self.makeTable(lister)
-                    except:
-                        if os.getenv('DEBUG') or os.getenv('debug'):
-                            traceback.format_exc(print_msg= True)
-                        else:
-                            traceback.format_exc(print_msg= False)
-                        pass
-            else:
-                args = parse.parse_args()
-                SORTED = False
-                sorting = args.sort_by
-                if args.search:
-                    self.search(args.search, False, args.fast, args.details, args.childs, args.recursive)
-                elif args.restart:
-                    self.restart(args.restart)
-                elif args.search_kill:
-                    self.search(args.search_kill, True, args.fast, args.details, args.childs, args.recursive)
-                elif args.memory_detail:
-                    self.get_memory_full_info(args.memory_detail, True)
-                else:
-                    if args.sort_time:
-                        sorting = 'time'
-                    if args.sort_cpu_percent:
-                        sorting = 'cpu'
-                    if args.sort_mem:
-                        sorting = 'mem'
-                    if args.sort_pid:
-                        sorting = 'pid'
-                    if args.sort_exe:
-                        sorting = 'exe'
-                    if args.sort_name:
-                        sorting = 'name'
-                    if args.sort_by:
-                        sorting = args.sort_by
-                    if args.kill:
-                        self.kill(args.kill)
-                    if args.always_kill:
-                        self.kill(args.always_kill, True)
-                    pfilter = []
-                    if args.filter:
-                        for i in args.filter:
-                            pfilter.append(str(i).lower())
-                    if args.user_all:
-                        user = 'all'
+                try:
+                    self.makeTable(lister)
+                except:
+                    if os.getenv('DEBUG') or os.getenv('debug'):
+                        traceback.format_exc(print_msg= True)
                     else:
-                        user = ''
-                    lister = self.ps(args.show_cpu_percent, args.all, user)
+                        traceback.format_exc(print_msg= False)
+                    pass
+        else:
+            args = parse.parse_args()
+            SORTED = False
+            sorting = args.sort_by
+            if args.search:
+                self.search(args.search, False, args.fast, args.details, args.childs, args.recursive)
+            elif args.restart:
+                self.restart(args.restart)
+            elif args.search_kill:
+                self.search(args.search_kill, True, args.fast, args.details, args.childs, args.recursive)
+            elif args.memory_detail:
+                self.get_memory_full_info(args.memory_detail, True)
+            else:
+                if args.sort_time:
+                    sorting = 'time'
+                if args.sort_cpu_percent:
+                    sorting = 'cpu'
+                if args.sort_mem:
+                    sorting = 'mem'
+                if args.sort_pid:
+                    sorting = 'pid'
+                if args.sort_exe:
+                    sorting = 'exe'
+                if args.sort_name:
+                    sorting = 'name'
+                if args.sort_by:
+                    sorting = args.sort_by
+                if args.kill:
+                    self.kill(args.kill)
+                if args.always_kill:
+                    self.kill(args.always_kill, True)
+                pfilter = []
+                if args.filter:
+                    for i in args.filter:
+                        pfilter.append(str(i).lower())
+                if args.user_all:
+                    user = 'all'
+                else:
+                    user = ''
+                lister = self.ps(args.show_cpu_percent, args.all, user, pid = args.pid)
 
-                    try:
-                        self.makeTable(lister, pfilter, sorting, args.tail, args.show_cpu_percent, args.reverse, args.show_status, args.list_details, args.fast_list_details, args.show_networks, args.show_networks_only)
-                    except:
-                        if os.getenv('DEBUG') or os.getenv('debug'):
-                            traceback.format_exc(print_msg= True)
-                        else:
-                            traceback.format_exc(print_msg= False)
-                        pass
+                try:
+                    self.makeTable(lister, pfilter, sorting, args.tail, args.show_cpu_percent, args.reverse, args.show_status, args.list_details, args.fast_list_details, args.show_networks, args.show_networks_only)
+                except:
+                    if os.getenv('DEBUG') or os.getenv('debug'):
+                        traceback.format_exc(print_msg= True)
+                    else:
+                        traceback.format_exc(print_msg= False)
+                    pass
 
 if __name__ == '__main__':
     #p, p1 = self.ps()
