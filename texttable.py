@@ -99,7 +99,7 @@ Maximilian Hils:
 import sys
 import string
 import codecs
-import make_colors
+#import make_colors
 
 reload(sys)  # Reload does the trick!
 sys.setdefaultencoding('UTF-8')
@@ -327,7 +327,7 @@ class Texttable:
             
         cells = []
         for i, x in enumerate(array):
-            cells.append(self._str(i, make_colors.make_colors(x, foreground, background, attrs)))
+            cells.append(self._str(i, x))
             #cells.append(self._str(i, x))
         self._rows.append(cells)
 

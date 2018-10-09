@@ -350,6 +350,8 @@ class ProcessList(object):
                 for i in data_search_keys:
                     data_search1.update({i:data_search.get(i)})
                 data_search = data_search1
+        MAX_LENGTH = cmdw.getWidth()
+        debug(MAX_LENGTH = MAX_LENGTH)
         if MAX_LENGTH <= (220 / 2) or list_details:
             number_network = 1
             if not sort: #MAX_LENGTH <= (220 / 2)
@@ -1459,6 +1461,11 @@ class ProcessList(object):
                     pass
         else:
             args = parse.parse_args()
+            fast_list_mode = False
+            MAX_LENGTH = cmdw.getWidth()
+            debug(MAX_LENGTH = MAX_LENGTH)
+            if MAX_LENGTH <= 220:
+                fast_list_mode = True
             SORTED = False
             sorting = args.sort_by
             if args.search:
@@ -1499,7 +1506,9 @@ class ProcessList(object):
                 lister = self.ps(args.show_cpu_percent, args.all, user, pid = args.pid)
 
                 try:
-                    self.makeTable(lister, pfilter, sorting, args.tail, args.show_cpu_percent, args.reverse, args.show_status, args.list_details, args.fast_list_details, args.show_networks, args.show_networks_only)
+                    if args.fast_list_details:
+                        fast_list_mode = True
+                    self.makeTable(lister, pfilter, sorting, args.tail, args.show_cpu_percent, args.reverse, args.show_status, args.list_details, fast_list_mode, args.show_networks, args.show_networks_only)
                 except:
                     if os.getenv('DEBUG') or os.getenv('debug'):
                         traceback.format_exc(print_msg= True)
