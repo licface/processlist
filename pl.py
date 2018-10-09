@@ -849,7 +849,10 @@ class ProcessList(object):
             except psutil.NoSuchProcess:
                 print "Process Inai =", process
             except:
-                traceback.format_exc()
+                if os.getenv('DEBUG') or os.getenv('DEBUG_SERVER'):
+                    traceback.format_exc()
+                else:
+                    traceback.format_exc(print_msg= False)
         return process_dict, n
                 
     def ps(self, show_cpu=False, show_all=False, user='all', pid = None):
