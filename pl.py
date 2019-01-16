@@ -357,17 +357,19 @@ class ProcessList(object):
             if not sort: #MAX_LENGTH <= (220 / 2)
                 if filter: #MAX_LENGTH <= (220 / 2)
                     for i in data_search:
-                        if os.path.splitext(data_search.get(i).get('name'))[0].lower() in filter or data_search.get(i).get('pid') in filter:
-                            name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, False, data_search)
-                            if show_networks_only:
-                                number_network = self.printNetworks(connections, fast_list_mode, number_network, name, pid)
-                            else:
-                                self.printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number_network)
-                                if show_networks:
-                                    number_network = self.printNetworks(connections, fast_list_mode, number = number_network)
-                            if not fast_list_mode:
-                                print "-" * MAX_LENGTH
-                            number += 1
+                        for fx in filter:
+                            if fx in os.path.splitext(data_search.get(i).get('name'))[0].lower() or fx in data_search.get(i).get('pid'):
+                        # if os.path.splitext(data_search.get(i).get('name'))[0].lower() in filter or data_search.get(i).get('pid') in filter:
+                                name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, False, data_search)
+                                if show_networks_only:
+                                    number_network = self.printNetworks(connections, fast_list_mode, number_network, name, pid)
+                                else:
+                                    self.printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number_network)
+                                    if show_networks:
+                                        number_network = self.printNetworks(connections, fast_list_mode, number = number_network)
+                                if not fast_list_mode:
+                                    print "-" * MAX_LENGTH
+                                number += 1
                 else:
                     for i in data_search:
                         name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, False, data_search)
@@ -385,17 +387,19 @@ class ProcessList(object):
             else: #MAX_LENGTH <= (220 / 2)
                 if filter: #MAX_LENGTH <= (220 / 2)
                     for i in data_search:
-                        if os.path.splitext(i[1].get('name'))[0].lower() in filter or i[1].get('pid') in filter:
-                            name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, sort)
-                            if show_networks_only:
-                                number = self.printNetworks(connections, fast_list_mode, number)
-                            else:
-                                self.printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
-                                if show_networks:
+                        for fx in filter:
+                            if fx in os.path.splitext(i[1].get('name'))[0].lower() or fx in i[1].get('pid'):
+                        # if os.path.splitext(i[1].get('name'))[0].lower() in filter or i[1].get('pid') in filter:
+                                name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, sort)
+                                if show_networks_only:
                                     number = self.printNetworks(connections, fast_list_mode, number)
-                            if not fast_list_mode:
-                                print "-" * MAX_LENGTH
-                            number += 1
+                                else:
+                                    self.printList(name, pid, exe, mem, cmd, cpu, status, fast_list_mode, number)
+                                    if show_networks:
+                                        number = self.printNetworks(connections, fast_list_mode, number)
+                                if not fast_list_mode:
+                                    print "-" * MAX_LENGTH
+                                number += 1
                 else:
                     for i in data_search:
                         name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, sort)
@@ -557,10 +561,13 @@ class ProcessList(object):
                 if filter:
                     data = {}
                     m = 1
+                    # debug(data_search=data_search, debug=True)
                     for x in data_search.keys():
-                        if os.path.splitext(data_search.get(x).get('name'))[0].lower() in filter:
-                            data.update({m: data_search.get(x)})
-                            m +=1
+                        for fx in filter:
+                            if fx in os.path.splitext(data_search.get(x).get('name'))[0].lower():
+                        # if os.path.splitext(data_search.get(x).get('name'))[0].lower() in filter:
+                                data.update({m: data_search.get(x)})
+                                m +=1
                     data_search = data
                     #debug(data_search=data_search)
                 for i in data_search:
