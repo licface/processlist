@@ -358,7 +358,7 @@ class ProcessList(object):
                 if filter: #MAX_LENGTH <= (220 / 2)
                     for i in data_search:
                         for fx in filter:
-                            if fx in os.path.splitext(data_search.get(i).get('name'))[0].lower() or fx in data_search.get(i).get('pid'):
+                            if fx in os.path.splitext(data_search.get(i).get('name'))[0].lower() or fx in str(data_search.get(i).get('pid')):
                         # if os.path.splitext(data_search.get(i).get('name'))[0].lower() in filter or data_search.get(i).get('pid') in filter:
                                 name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, False, data_search)
                                 if show_networks_only:
@@ -388,7 +388,7 @@ class ProcessList(object):
                 if filter: #MAX_LENGTH <= (220 / 2)
                     for i in data_search:
                         for fx in filter:
-                            if fx in os.path.splitext(i[1].get('name'))[0].lower() or fx in i[1].get('pid'):
+                            if fx in os.path.splitext(i[1].get('name'))[0].lower() or fx in str(i[1].get('pid')):
                         # if os.path.splitext(i[1].get('name'))[0].lower() in filter or i[1].get('pid') in filter:
                                 name, pid, exe, cmd, cpu, time, status, mem, connections = self.getData(i, sort)
                                 if show_networks_only:
