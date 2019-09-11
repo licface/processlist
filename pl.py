@@ -1283,62 +1283,10 @@ class ProcessList(object):
                                     break
                             print "-" * 100
                 if ver == 0:
+                    #debug(str_i = str(i), debug = True)
                     for n in list_process:
-                        if str(i) == list_process.get(n).get('exe')[0].lower():
-                            cmd = []
-                            ver += 1
-                            p = psutil.Process(list_process.get(n).get('pid'))
-                            p.terminate()
-                            try:
-                                STATUS = p.status()
-                            except:
-                                STATUS = "TERMINATED !!!"                        
-                            print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
-                            print "PID    :", make_colors(str(list_process.get(n).get('pid')), 'white', 'red')
-                            print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
-                            print "MEM    :", make_colors(self.convert_size(list_process.get(n).get('mem')), 'white', 'blue')
-                            if str(list_process.get(n).get('name')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                print "CMD    :"
-                            elif str(list_process.get(n).get('exe')) == str(" ".join(list_process.get(n).get('cmd'))):
-                                print "CMD    :"
-                            elif str(list_process.get(n).get('exe')) in str(" ".join(list_process.get(n).get('cmd'))):
-                                print "CMD    :"
-                            else:
-                                print "CMD    :", make_colors(str(" ".join(list_process.get(n).get('cmd'))), 'white', 'blue')                    
-                                cmd = list_process.get(n).get('cmd')
-                            print "STATUS :", make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
-                            print "+" * 100
-                            while 1:
-                                try:
-                                    p.status()
-                                except:
-                                    a = subprocess.Popen([list_process.get(n).get('exe')] + cmd, stderr=subprocess.PIPE, shell=True)
-                                    p1 = psutil.Process(int(a.pid))
-                                    print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
-                                    print "PID    :", make_colors(str(a.pid), 'white', 'red')
-                                    print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
-                                    print "MEM    :", make_colors(self.convert_size(p1.memory_full_info().vms), 'white', 'blue')
-                                    print "CMD    :", " ".join(cmd)
-                                    print "STATUS :", make_colors("STARTED", 'white', 'red', ['bold', 'blink'])
-                                    try:
-                                        x = p.status()
-                                        if x == 'running':
-                                            break
-                                        if not a.poll():
-                                            break
-                                    except:
-                                        if not a.poll():
-                                            break
-                                        else:
-                                            pass
-                                    (out, err) = a.communicate()
-                                    if err:
-                                        print "STATUS1:", make_colors("ERROR", 'white', 'red', ['bold', 'blink'])
-                                        print make_colors("ERROR: ", 'white','red',['bold','blink']) + make_colors(str(err), 'white','yellow',['bold'])
-                                    break
-                            print "-" * 100
-                        else:
-                            if str(i) in list_process.get(n).get('exe').lower():
+                        try:
+                            if str(i) == list_process.get(n).get('exe')[0].lower():
                                 cmd = []
                                 ver += 1
                                 p = psutil.Process(list_process.get(n).get('pid'))
@@ -1391,8 +1339,65 @@ class ProcessList(object):
                                             print make_colors("ERROR: ", 'white','red',['bold','blink']) + make_colors(str(err), 'white','yellow',['bold'])
                                         break
                                 print "-" * 100
+                            else:
+                                if str(i) in list_process.get(n).get('exe').lower():
+                                    cmd = []
+                                    ver += 1
+                                    p = psutil.Process(list_process.get(n).get('pid'))
+                                    p.terminate()
+                                    try:
+                                        STATUS = p.status()
+                                    except:
+                                        STATUS = "TERMINATED !!!"                        
+                                    print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
+                                    print "PID    :", make_colors(str(list_process.get(n).get('pid')), 'white', 'red')
+                                    print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
+                                    print "MEM    :", make_colors(self.convert_size(list_process.get(n).get('mem')), 'white', 'blue')
+                                    if str(list_process.get(n).get('name')) == str(" ".join(list_process.get(n).get('cmd'))):
+                                        print "CMD    :"
+                                    elif str(list_process.get(n).get('exe')) == str(" ".join(list_process.get(n).get('cmd'))):
+                                        print "CMD    :"
+                                    elif str(list_process.get(n).get('exe')) in str(" ".join(list_process.get(n).get('cmd'))):
+                                        print "CMD    :"
+                                    else:
+                                        print "CMD    :", make_colors(str(" ".join(list_process.get(n).get('cmd'))), 'white', 'blue')                    
+                                        cmd = list_process.get(n).get('cmd')
+                                    print "STATUS :", make_colors(STATUS.upper(), 'white', 'red', ['bold', 'blink'])
+                                    print "+" * 100
+                                    while 1:
+                                        try:
+                                            p.status()
+                                        except:
+                                            a = subprocess.Popen([list_process.get(n).get('exe')] + cmd, stderr=subprocess.PIPE, shell=True)
+                                            p1 = psutil.Process(int(a.pid))
+                                            print "Name   :", make_colors(str(list_process.get(n).get('name')), 'yellow')
+                                            print "PID    :", make_colors(str(a.pid), 'white', 'red')
+                                            print "EXE    :", make_colors(str(list_process.get(n).get('exe')), 'white', 'green')
+                                            print "MEM    :", make_colors(self.convert_size(p1.memory_full_info().vms), 'white', 'blue')
+                                            print "CMD    :", " ".join(cmd)
+                                            print "STATUS :", make_colors("STARTED", 'white', 'red', ['bold', 'blink'])
+                                            try:
+                                                x = p.status()
+                                                if x == 'running':
+                                                    break
+                                                if not a.poll():
+                                                    break
+                                            except:
+                                                if not a.poll():
+                                                    break
+                                                else:
+                                                    pass
+                                            (out, err) = a.communicate()
+                                            if err:
+                                                print "STATUS1:", make_colors("ERROR", 'white', 'red', ['bold', 'blink'])
+                                                print make_colors("ERROR: ", 'white','red',['bold','blink']) + make_colors(str(err), 'white','yellow',['bold'])
+                                            break
+                                    print "-" * 100
+                        except:
+                            #print make_colors("No Process FOUND !", 'lw', 'lr', attrs = ['blink'])
+                            pass
                 if ver == 0:
-                    print make_colors("NOT FOUND !", 'white', 'red', ['bold', 'blink'])
+                    print make_colors("NO PROCESS FOUND !", 'lw', 'lr', ['bold', 'blink'])
 
     def usage(self):
         help = """
